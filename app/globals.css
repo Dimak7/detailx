@@ -1,27 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #0c0d0b;
-  --graphite: #1d211c;
-  --stone: #d8d5cd;
-  --mist: #f5f3ee;
-  --frost: #e8ece5;
-  --olive: #69725a;
-  --moss: #a7b576;
-  --rouge: #a7454e;
-  --silver: #dce0dd;
+  --ink: #050506;
+  --graphite: #121316;
+  --charcoal: #1b1d22;
+  --smoke: #f5f5f2;
+  --white: #ffffff;
+  --ash: #c7c9c7;
+  --steel: #73777c;
+  --red: #c1121f;
+  --red-dark: #820b14;
+  --red-soft: #f5d8dc;
 }
 
 @theme inline {
   --color-ink: var(--ink);
   --color-graphite: var(--graphite);
-  --color-stone: var(--stone);
-  --color-mist: var(--mist);
-  --color-frost: var(--frost);
-  --color-olive: var(--olive);
-  --color-moss: var(--moss);
-  --color-rouge: var(--rouge);
-  --color-silver: var(--silver);
+  --color-charcoal: var(--charcoal);
+  --color-smoke: var(--smoke);
+  --color-white: var(--white);
+  --color-ash: var(--ash);
+  --color-steel: var(--steel);
+  --color-red: var(--red);
+  --color-red-dark: var(--red-dark);
+  --color-red-soft: var(--red-soft);
 }
 
 * {
@@ -35,16 +37,16 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 12% 18%, rgba(167, 181, 118, 0.18), transparent 28rem),
-    radial-gradient(circle at 85% 8%, rgba(167, 69, 78, 0.15), transparent 24rem),
-    var(--mist);
+    radial-gradient(circle at 12% 18%, rgba(193, 18, 31, 0.2), transparent 28rem),
+    radial-gradient(circle at 85% 8%, rgba(255, 255, 255, 0.08), transparent 24rem),
+    linear-gradient(180deg, #050506 0%, #121316 42%, #f5f5f2 42%, #f5f5f2 100%);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 ::selection {
-  background: var(--moss);
-  color: var(--ink);
+  background: var(--red);
+  color: var(--white);
 }
 
 .section-pad {
@@ -57,7 +59,7 @@ body {
 }
 
 .eyebrow {
-  color: var(--rouge);
+  color: var(--red);
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.14em;
@@ -65,24 +67,24 @@ body {
 }
 
 .glass-panel {
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  background: rgba(247, 248, 245, 0.72);
-  box-shadow: 0 24px 80px rgba(12, 13, 11, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 19, 22, 0.72);
+  box-shadow: 0 24px 80px rgba(5, 5, 6, 0.34);
   backdrop-filter: blur(18px);
 }
 
 .dark-panel {
-  border: 1px solid rgba(220, 224, 221, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    linear-gradient(145deg, rgba(29, 33, 28, 0.96), rgba(12, 13, 11, 0.96)),
+    linear-gradient(145deg, rgba(27, 29, 34, 0.96), rgba(5, 5, 6, 0.98)),
     var(--ink);
-  box-shadow: 0 24px 80px rgba(12, 13, 11, 0.24);
+  box-shadow: 0 24px 80px rgba(5, 5, 6, 0.34);
 }
 
 .soft-ring {
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.36),
-    0 22px 60px rgba(12, 13, 11, 0.12);
+    inset 0 0 0 1px rgba(5, 5, 6, 0.08),
+    0 22px 60px rgba(5, 5, 6, 0.14);
 }
 
 .motion-card {

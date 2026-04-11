@@ -80,7 +80,7 @@ export function BookingForm({ services }: BookingFormProps) {
   }
 
   return (
-    <form className="rounded-lg bg-white/85 p-4 shadow-[0_28px_90px_rgba(12,13,11,0.18)] ring-1 ring-ink/10 backdrop-blur md:p-6" onSubmit={submitBooking}>
+    <form className="rounded-lg bg-white p-4 shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-6" onSubmit={submitBooking}>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 font-black uppercase text-sm text-ink">
           Service
@@ -102,20 +102,20 @@ export function BookingForm({ services }: BookingFormProps) {
         </label>
       </div>
 
-      <div className="mt-5 rounded-lg bg-graphite p-4 text-mist">
+      <div className="mt-5 rounded-lg bg-ink p-4 text-white ring-1 ring-red/25">
         <div className="mb-4 grid grid-cols-[44px_1fr_44px] items-center gap-3 text-center">
           <button className="calendar-control" type="button" onClick={() => moveMonth(-1)} aria-label="Previous month">-</button>
           <p className="font-black uppercase">{monthLabel}</p>
           <button className="calendar-control" type="button" onClick={() => moveMonth(1)} aria-label="Next month">+</button>
         </div>
-        <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-black uppercase text-stone">
+        <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-black uppercase text-ash">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}
         </div>
         <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((day, index) => (
             day ? (
               <button
-                className={`rounded-lg py-3 text-sm font-black transition ${selectedDate === day.iso ? "bg-moss text-ink" : "bg-mist/10 text-mist hover:bg-mist/20"} disabled:cursor-not-allowed disabled:opacity-30`}
+                className={`rounded-lg py-3 text-sm font-black transition ${selectedDate === day.iso ? "bg-red text-white" : "bg-white/10 text-white hover:bg-white/20"} disabled:cursor-not-allowed disabled:opacity-30`}
                 disabled={day.disabled}
                 key={day.iso}
                 onClick={() => setSelectedDate(day.iso)}
@@ -132,7 +132,7 @@ export function BookingForm({ services }: BookingFormProps) {
 
       <div className="mt-5 grid gap-2 sm:grid-cols-5">
         {timeSlots.map((time) => (
-          <button className={`rounded-lg px-3 py-3 text-sm font-black transition ${selectedTime === time ? "bg-moss text-ink" : "bg-frost text-ink hover:bg-stone"}`} key={time} onClick={() => setSelectedTime(time)} type="button">
+          <button className={`rounded-lg px-3 py-3 text-sm font-black transition ${selectedTime === time ? "bg-red text-white" : "bg-smoke text-ink hover:bg-red-soft"}`} key={time} onClick={() => setSelectedTime(time)} type="button">
             {time}
           </button>
         ))}
@@ -145,11 +145,11 @@ export function BookingForm({ services }: BookingFormProps) {
         <label className="form-label">Service location<input className="field" name="address" minLength={5} required placeholder="Chicago address or neighborhood" /></label>
       </div>
       <label className="form-label mt-4">Optional notes<textarea className="field min-h-28 resize-y" name="notes" maxLength={800} placeholder="Parking access, pet hair, stains, coating goals, tint questions..." /></label>
-      <button className="mt-5 w-full rounded-lg bg-graphite px-6 py-4 font-black uppercase text-mist transition hover:-translate-y-0.5 hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60" disabled={loading} type="submit">
+      <button className="mt-5 w-full rounded-lg bg-red px-6 py-4 font-black uppercase text-white shadow-[0_16px_42px_rgba(193,18,31,0.25)] transition hover:-translate-y-0.5 hover:bg-red-dark disabled:cursor-not-allowed disabled:opacity-60" disabled={loading} type="submit">
         {loading ? "Requesting..." : "Request Booking"}
       </button>
       {status.message ? (
-        <p className={`mt-4 rounded-lg px-4 py-3 text-sm font-bold ${status.type === "success" ? "bg-moss/30 text-ink" : "bg-red-100 text-red-900"}`}>
+        <p className={`mt-4 rounded-lg px-4 py-3 text-sm font-bold ${status.type === "success" ? "bg-red-soft text-ink" : "bg-red-100 text-red-900"}`}>
           {status.message}
         </p>
       ) : null}
@@ -158,15 +158,15 @@ export function BookingForm({ services }: BookingFormProps) {
           min-height: 52px;
           width: 100%;
           border-radius: 8px;
-          border: 1px solid rgba(12, 13, 11, 0.14);
-          background: rgba(245, 243, 238, 0.9);
+          border: 1px solid rgba(5, 5, 6, 0.14);
+          background: rgba(245, 245, 242, 0.9);
           padding: 0.85rem 0.95rem;
           color: var(--ink);
           outline: none;
         }
         .field:focus {
-          border-color: var(--graphite);
-          box-shadow: 0 0 0 4px rgba(167, 181, 118, 0.32);
+          border-color: var(--red);
+          box-shadow: 0 0 0 4px rgba(193, 18, 31, 0.18);
         }
         .form-label {
           display: grid;
@@ -179,7 +179,8 @@ export function BookingForm({ services }: BookingFormProps) {
         .calendar-control {
           height: 44px;
           border-radius: 8px;
-          background: rgba(245, 243, 238, 0.1);
+          background: rgba(255, 255, 255, 0.1);
+          color: var(--white);
           font-weight: 900;
         }
       `}</style>

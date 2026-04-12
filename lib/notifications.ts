@@ -7,6 +7,8 @@ type NotificationResult = {
   sms: "sent" | "skipped" | "failed";
 };
 
+const defaultBusinessEmail = "sales@detailxchicago.com";
+
 export async function sendBookingNotifications(booking: BookingInput & { id: string }) {
   const result: NotificationResult = {
     email: "skipped",
@@ -23,32 +25,67 @@ export async function sendBookingNotifications(booking: BookingInput & { id: str
 }
 
 async function sendEmail(booking: BookingInput & { id: string }): Promise<NotificationResult["email"]> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.BOOKING_FROM_EMAIL;
-  const adminEmail = process.env.BOOKING_ADMIN_EMAIL;
+  const apiKey = process.env.EMAIL_API_KEY;
+  const businessEmail = process.env.BUSINESS_EMAIL || defaultBusinessEmail;
+  const from = process.env.EMAIL_FROM || `DETAILX Chicago <${businessEmail}>`;
 
   if (!apiKey || !from) {
-    console.info("Email skipped. Configure RESEND_API_KEY and BOOKING_FROM_EMAIL to enable confirmations.");
+    console.info("Email skipped. Configure EMAIL_API_KEY and EMAIL_FROM to enable Resend confirmations.");
     return "skipped";
   }
 
   try {
     const resend = new Resend(apiKey);
-    const subject = `DETAILX Chicago booking request ${booking.id}`;
-    const html = buildEmailHtml(booking);
-    const to = adminEmail ? [booking.email, adminEmail] : [booking.email];
+    const [customerResult, businessResult] = await Promise.allSettled([
+      sendResendEmail(resend, {
+        from,
+        to: booking.email,
+        subject: "Your DETAILX Chicago Booking Confirmation",
+        html: buildCustomerEmailHtml(booking, businessEmail),
+        replyTo: businessEmail,
+      }),
+      sendResendEmail(resend, {
+        from,
+        to: businessEmail,
+        subject: "New Booking - DETAILX Chicago",
+        html: buildBusinessEmailHtml(booking),
+        replyTo: booking.email,
+      }),
+    ]);
 
-    await resend.emails.send({
-      from,
-      to,
-      subject,
-      html,
-    });
+    if (customerResult.status === "rejected") {
+      console.error("Customer booking email failed", customerResult.reason);
+    }
+
+    if (businessResult.status === "rejected") {
+      console.error("Business booking email failed", businessResult.reason);
+    }
+
+    if (customerResult.status === "rejected" || businessResult.status === "rejected") {
+      return "failed";
+    }
 
     return "sent";
   } catch (error) {
     console.error("Booking email failed", error);
     return "failed";
+  }
+}
+
+async function sendResendEmail(
+  resend: Resend,
+  message: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+    replyTo: string;
+  }
+) {
+  const { error } = await resend.emails.send(message);
+
+  if (error) {
+    throw new Error(JSON.stringify(error));
   }
 }
 
@@ -75,21 +112,76 @@ async function sendSms(booking: BookingInput & { id: string }): Promise<Notifica
   }
 }
 
-function buildEmailHtml(booking: BookingInput & { id: string }) {
+function buildCustomerEmailHtml(booking: BookingInput & { id: string }, businessEmail: string) {
   return `
-    <div style="font-family:Arial,sans-serif;color:#0c0d0b;line-height:1.6">
-      <h1>DETAILX Chicago booking request received</h1>
-      <p>Thanks, ${escapeHtml(booking.name)}. We received your request and will confirm final availability shortly.</p>
-      <ul>
-        <li><strong>Confirmation:</strong> ${booking.id}</li>
-        <li><strong>Service:</strong> ${escapeHtml(booking.service)}</li>
-        <li><strong>Date:</strong> ${escapeHtml(booking.date)}</li>
-        <li><strong>Time:</strong> ${escapeHtml(booking.time)}</li>
-        <li><strong>Vehicle:</strong> ${escapeHtml(booking.vehicleType)}</li>
-        <li><strong>Location:</strong> ${escapeHtml(booking.address)}</li>
-      </ul>
-      <p>${escapeHtml(booking.notes || "No extra notes provided.")}</p>
+    <div style="margin:0;background:#f5f5f2;padding:32px 16px;font-family:Arial,sans-serif;color:#050506;line-height:1.6">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+        <div style="background:#050506;color:#ffffff;padding:28px">
+          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase">DETAILX Chicago</p>
+          <h1 style="margin:10px 0 0;font-size:28px;line-height:1.05;text-transform:uppercase">Your booking request is confirmed.</h1>
+        </div>
+        <div style="padding:28px">
+          <p style="margin:0 0 18px">Thank you for booking with DETAILX Chicago, ${escapeHtml(booking.name)}. We received your appointment request and will arrive at your location ready to take care of the details.</p>
+          ${buildDetailTable(booking)}
+          <p style="margin:22px 0 0">If anything needs to change, reply to this email or contact us at <a style="color:#c1121f;font-weight:700" href="mailto:${escapeHtml(businessEmail)}">${escapeHtml(businessEmail)}</a>.</p>
+        </div>
+        <div style="border-top:1px solid #e4e4df;padding:18px 28px;color:#73777c;font-size:13px">
+          Premium Mobile Detailing in Chicago
+        </div>
+      </div>
     </div>
+  `;
+}
+
+function buildBusinessEmailHtml(booking: BookingInput & { id: string }) {
+  return `
+    <div style="margin:0;background:#f5f5f2;padding:32px 16px;font-family:Arial,sans-serif;color:#050506;line-height:1.6">
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+        <div style="background:#050506;color:#ffffff;padding:28px">
+          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase">New booking</p>
+          <h1 style="margin:10px 0 0;font-size:28px;line-height:1.05;text-transform:uppercase">${escapeHtml(booking.service)} / ${escapeHtml(booking.date)} at ${escapeHtml(booking.time)}</h1>
+        </div>
+        <div style="padding:28px">
+          <p style="margin:0 0 18px"><strong>Contact:</strong> ${escapeHtml(booking.name)} / ${escapeHtml(booking.phone)} / <a style="color:#c1121f;font-weight:700" href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a></p>
+          ${buildDetailTable(booking)}
+        </div>
+        <div style="border-top:1px solid #e4e4df;padding:18px 28px;color:#73777c;font-size:13px">
+          Booking ID: ${booking.id}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildDetailTable(booking: BookingInput & { id: string }) {
+  const details = [
+    ["Confirmation", booking.id],
+    ["Name", booking.name],
+    ["Service", booking.service],
+    ["Date", booking.date],
+    ["Time", booking.time],
+    ["Vehicle", booking.vehicleType],
+    ["Location", booking.address],
+    ["Phone", booking.phone],
+    ["Email", booking.email],
+    ["Notes", booking.notes || "No extra notes provided."],
+  ];
+
+  return `
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e4e4df">
+      <tbody>
+        ${details
+          .map(
+            ([label, value]) => `
+              <tr>
+                <th style="width:34%;padding:12px;text-align:left;background:#f5f5f2;border-bottom:1px solid #e4e4df;font-size:13px;text-transform:uppercase">${escapeHtml(label)}</th>
+                <td style="padding:12px;border-bottom:1px solid #e4e4df">${escapeHtml(value)}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
   `;
 }
 

@@ -103,12 +103,12 @@ If `DATABASE_URL` is not set, bookings are stored locally in `data/bookings.json
 Email confirmations use Resend. Set:
 
 ```bash
-RESEND_API_KEY=
-BOOKING_FROM_EMAIL=
-BOOKING_ADMIN_EMAIL=
+EMAIL_API_KEY=
+EMAIL_FROM="DETAILX Chicago <sales@detailxchicago.com>"
+BUSINESS_EMAIL=sales@detailxchicago.com
 ```
 
-`BOOKING_FROM_EMAIL` must be a verified Resend sender. If email variables are missing, the booking still saves and the API reports email as skipped.
+`EMAIL_FROM` must be a verified Resend sender/domain. After a booking is saved, the app sends a customer confirmation email and a business notification email to `BUSINESS_EMAIL`. If email sending fails or variables are missing, the booking still saves and the API logs the email issue without blocking the customer.
 
 ## SMS confirmations
 

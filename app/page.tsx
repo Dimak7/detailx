@@ -350,7 +350,7 @@ function ContactFooter() {
         </div>
         <div className="grid gap-3 text-ash">
           <a href="tel:+13125550148">(312) 555-0148</a>
-          <a href="mailto:book@detailxchicago.com">book@detailxchicago.com</a>
+          <a href="mailto:sales@detailxchicago.com">sales@detailxchicago.com</a>
           <a href="https://www.instagram.com/detailxchicago/" target="_blank" rel="noreferrer">@detailxchicago</a>
           <p>Chicago service area</p>
           <a className="mt-3 rounded-lg bg-red px-5 py-3 text-center font-black text-white transition hover:bg-red-dark" href="#booking">Book Detail</a>

@@ -57,7 +57,13 @@ export function BookingForm({ services }: BookingFormProps) {
       event.currentTarget.reset();
       setSelectedDate("");
       setSelectedTime("");
-      setStatus({ type: "success", message: `Reservation received. Confirmation code: ${result.bookingId}` });
+      setStatus({
+        type: "success",
+        message:
+          result.notifications?.email === "sent"
+            ? "Booking confirmed. Check your email for details. Questions? sales@detailxchicago.com"
+            : "Booking confirmed. We received your request and will follow up from sales@detailxchicago.com shortly.",
+      });
     } catch (error) {
       setStatus({
         type: "error",

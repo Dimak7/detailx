@@ -29,6 +29,7 @@ export function BookingForm({ services }: BookingFormProps) {
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setStatus({ type: "idle", message: "" });
 
     if (!selectedDate || !selectedTime) {
@@ -36,7 +37,7 @@ export function BookingForm({ services }: BookingFormProps) {
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
     payload.date = selectedDate;
     payload.time = selectedTime;
@@ -54,7 +55,7 @@ export function BookingForm({ services }: BookingFormProps) {
         throw new Error(result.error || "Booking request failed.");
       }
 
-      event.currentTarget.reset();
+      form.reset();
       setSelectedDate("");
       setSelectedTime("");
       setStatus({

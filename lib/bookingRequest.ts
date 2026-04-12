@@ -18,11 +18,19 @@ export async function handleBookingRequest(request: Request) {
         : notifications.email === "failed"
           ? "Booking saved. Email confirmations could not be sent."
           : null;
+    const bookingStatus =
+      notifications.email === "sent"
+        ? "booking_saved_email_sent"
+        : notifications.email === "failed"
+          ? "booking_saved_email_failed"
+          : "booking_saved_email_skipped";
 
     return NextResponse.json(
       {
         ok: true,
+        status: bookingStatus,
         bookingId: savedBooking.id,
+        emailSent: notifications.email === "sent",
         notifications,
         warning: emailWarning,
       },
@@ -33,6 +41,7 @@ export async function handleBookingRequest(request: Request) {
       return NextResponse.json(
         {
           ok: false,
+          status: "booking_failed",
           error: error.issues[0]?.message || "Invalid booking details.",
         },
         { status: 400 }
@@ -40,13 +49,14 @@ export async function handleBookingRequest(request: Request) {
     }
 
     if (error instanceof Error && error.message === "Choose a future booking date.") {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ ok: false, status: "booking_failed", error: error.message }, { status: 400 });
     }
 
     console.error("Booking request failed", error);
     return NextResponse.json(
       {
         ok: false,
+        status: "booking_failed",
         error: "We could not save the booking request. Please try again.",
       },
       { status: 500 }

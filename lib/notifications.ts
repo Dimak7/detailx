@@ -27,6 +27,10 @@ export async function sendBookingNotifications(booking: BookingInput & { id: str
 }
 
 async function sendEmail(booking: BookingInput & { id: string }): Promise<NotificationResult["email"]> {
+  console.info("Booking email notification config", {
+    hasResendApiKey: isResendConfigured(),
+  });
+
   if (!isResendConfigured()) {
     console.error("Email skipped: RESEND_API_KEY is not configured. Booking was saved, but Resend confirmation emails were not sent.");
     return "skipped";

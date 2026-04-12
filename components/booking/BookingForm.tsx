@@ -66,10 +66,7 @@ export function BookingForm({ services }: BookingFormProps) {
       setSelectedTime("");
       setStatus({
         type: "success",
-        message:
-          result.notifications?.email === "sent"
-            ? "Booking confirmed. Check your email for details. Questions? sales@detailxchicago.com"
-            : "Booking confirmed. We received your request and will follow up from sales@detailxchicago.com shortly.",
+        message: getSuccessMessage(result),
       });
     } catch (error) {
       setStatus({
@@ -199,6 +196,22 @@ export function BookingForm({ services }: BookingFormProps) {
       `}</style>
     </form>
   );
+}
+
+function getSuccessMessage(result: { status?: string; emailSent?: boolean; warning?: string }) {
+  if (result.status === "booking_saved_email_sent" || result.emailSent) {
+    return "Booking confirmed. Check your email for details. Questions? sales@detailxchicago.com";
+  }
+
+  if (result.status === "booking_saved_email_failed" || result.status === "booking_saved_email_skipped") {
+    return "Booking received. We'll contact you shortly at the email or phone number provided.";
+  }
+
+  if (result.warning) {
+    return "Booking received. We'll contact you shortly.";
+  }
+
+  return "Booking confirmed. We received your request and will follow up from sales@detailxchicago.com shortly.";
 }
 
 function buildCalendar(cursor: Date) {

@@ -29,13 +29,8 @@ export function getResendFromEmail() {
 }
 
 export async function sendCustomerBookingConfirmation(booking: BookingEmail) {
-  const resend = getResendClient();
-
-  if (!resend) {
-    throw new Error("RESEND_API_KEY is not configured.");
-  }
-
   await sendEmail({
+    label: "customer-booking-confirmation",
     to: booking.email,
     subject: "Your DETAILX Chicago Booking Confirmation",
     html: buildCustomerEmailHtml(booking),
@@ -44,13 +39,8 @@ export async function sendCustomerBookingConfirmation(booking: BookingEmail) {
 }
 
 export async function sendBusinessBookingNotification(booking: BookingEmail) {
-  const resend = getResendClient();
-
-  if (!resend) {
-    throw new Error("RESEND_API_KEY is not configured.");
-  }
-
   await sendEmail({
+    label: "business-booking-notification",
     to: getBusinessEmail(),
     subject: "New Booking - DETAILX Chicago",
     html: buildBusinessEmailHtml(booking),
@@ -59,28 +49,49 @@ export async function sendBusinessBookingNotification(booking: BookingEmail) {
 }
 
 async function sendEmail(message: {
+  label: string;
   to: string;
   subject: string;
   html: string;
   replyTo: string;
 }) {
   const resend = getResendClient();
+  const from = getResendFromEmail();
+
+  console.info("Resend booking email config", {
+    label: message.label,
+    hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+    from,
+    to: message.to,
+    businessEmail: getBusinessEmail(),
+  });
 
   if (!resend) {
     throw new Error("RESEND_API_KEY is not configured.");
   }
 
-  const { error } = await resend.emails.send({
-    from: getResendFromEmail(),
+  const response = await resend.emails.send({
+    from,
     to: message.to,
     subject: message.subject,
     html: message.html,
     replyTo: message.replyTo,
   });
 
-  if (error) {
-    throw new Error(JSON.stringify(error));
+  console.info("Resend booking email response", {
+    label: message.label,
+    response,
+  });
+
+  if (response.error) {
+    console.error("Resend booking email error", {
+      label: message.label,
+      error: response.error,
+    });
+    throw new Error(JSON.stringify(response.error));
   }
+
+  return response.data;
 }
 
 function buildCustomerEmailHtml(booking: BookingEmail) {

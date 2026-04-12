@@ -31,6 +31,7 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 |   |-- bookingSchema.ts
 |   |-- bookingStore.ts
 |   |-- notifications.ts
+|   |-- resend.ts
 |   `-- siteData.ts
 |-- .env.example
 |-- package.json
@@ -103,12 +104,12 @@ If `DATABASE_URL` is not set, bookings are stored locally in `data/bookings.json
 Email confirmations use Resend. Set:
 
 ```bash
-EMAIL_API_KEY=
-EMAIL_FROM="DETAILX Chicago <sales@detailxchicago.com>"
+RESEND_API_KEY=
 BUSINESS_EMAIL=sales@detailxchicago.com
+RESEND_FROM_EMAIL=bookings@detailxchicago.com
 ```
 
-`EMAIL_FROM` must be a verified Resend sender/domain. After a booking is saved, the app sends a customer confirmation email and a business notification email to `BUSINESS_EMAIL`. If email sending fails or variables are missing, the booking still saves and the API logs the email issue without blocking the customer.
+`RESEND_FROM_EMAIL` must be on a verified Resend domain. Use `bookings@detailxchicago.com` when that sender is ready; otherwise set it to another verified sender such as `hello@detailxchicago.com` or `sales@detailxchicago.com`. After a booking is saved, the app sends a customer confirmation email and a business notification email to `BUSINESS_EMAIL`. If email sending fails or variables are missing, the booking still saves and the API returns a warning without crashing the customer flow.
 
 ## SMS confirmations
 

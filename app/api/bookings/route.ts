@@ -14,12 +14,19 @@ export async function POST(request: Request) {
 
     const savedBooking = await saveBooking(booking);
     const notifications = await sendBookingNotifications(savedBooking);
+    const emailWarning =
+      notifications.email === "skipped"
+        ? "Booking saved. Email confirmations were skipped because email is not configured."
+        : notifications.email === "failed"
+          ? "Booking saved. Email confirmations could not be sent."
+          : null;
 
     return NextResponse.json(
       {
         ok: true,
         bookingId: savedBooking.id,
         notifications,
+        warning: emailWarning,
       },
       { status: 201 }
     );

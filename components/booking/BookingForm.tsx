@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 
 const timeSlots = ["8:00 AM", "10:30 AM", "1:00 PM", "3:30 PM", "6:00 PM"];
 const vehicleTypes = ["Sedan / Coupe", "SUV / Crossover", "Truck", "Luxury / Exotic", "Fleet vehicle"];
@@ -23,14 +23,20 @@ export function BookingForm({ services }: BookingFormProps) {
   });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<Status>({ type: "idle", message: "" });
+  const formRef = useRef<HTMLFormElement>(null);
 
   const calendarDays = useMemo(() => buildCalendar(cursor), [cursor]);
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
+    const form = event.currentTarget || formRef.current;
     setStatus({ type: "idle", message: "" });
+
+    if (!form) {
+      setStatus({ type: "error", message: "We could not read the booking form. Please refresh and try again." });
+      return;
+    }
 
     if (!selectedDate || !selectedTime) {
       setStatus({ type: "error", message: "Choose a date and time before requesting your detail." });
@@ -55,7 +61,7 @@ export function BookingForm({ services }: BookingFormProps) {
         throw new Error(result.error || "Booking request failed.");
       }
 
-      form.reset();
+      (formRef.current ?? form)?.reset();
       setSelectedDate("");
       setSelectedTime("");
       setStatus({
@@ -87,7 +93,7 @@ export function BookingForm({ services }: BookingFormProps) {
   }
 
   return (
-    <form className="rounded-lg bg-white p-4 shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-6" onSubmit={submitBooking}>
+    <form ref={formRef} className="rounded-lg bg-white p-4 shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-6" onSubmit={submitBooking}>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 font-black uppercase text-sm text-ink">
           Service

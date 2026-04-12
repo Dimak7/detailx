@@ -30,7 +30,7 @@ async function sendEmail(booking: BookingInput & { id: string }): Promise<Notifi
   const from = process.env.EMAIL_FROM || `DETAILX Chicago <${businessEmail}>`;
 
   if (!apiKey || !from) {
-    console.info("Email skipped. Configure EMAIL_API_KEY and EMAIL_FROM to enable Resend confirmations.");
+    console.error("Email skipped: EMAIL_API_KEY is not configured. Booking was saved, but Resend confirmation emails were not sent.");
     return "skipped";
   }
 

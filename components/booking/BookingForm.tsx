@@ -50,7 +50,7 @@ export function BookingForm({ services }: BookingFormProps) {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/bookings", {
+      const response = await fetch("/api/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

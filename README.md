@@ -65,7 +65,7 @@ npm run dev
 
 ## Booking backend
 
-The booking form submits to `POST /api/bookings`.
+The booking form submits to `POST /api/book`, a standard Next.js route handler that is stable across Railway redeploys and does not depend on Server Actions. `POST /api/bookings` is kept as a compatibility alias and uses the same handler.
 
 Validated fields:
 

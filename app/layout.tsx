@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "DETAILX Chicago | Premium Mobile Detailing",
   description:
-    "Premium mobile detailing, ceramic coating, tint, and paint correction for Chicago drivers.",
+    "Premium mobile detailing, ceramic coating, tint, polishing, and paint correction for Chicago drivers.",
   openGraph: {
     title: "DETAILX Chicago",
     description: "Premium mobile detailing brought to homes, garages, and offices across Chicago.",

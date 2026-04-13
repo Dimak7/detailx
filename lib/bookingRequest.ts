@@ -1,48 +1,29 @@
-import "server-only";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { assertFutureDate, bookingSchema } from "./bookingSchema";
 import { saveBooking } from "./bookingStore";
 import { sendBookingNotifications } from "./notifications";
-import { getEstimatedPrice } from "./pricing";
 
 export async function handleBookingRequest(request: Request) {
   try {
-    logBookingRequestHost(request);
     const body = await request.json();
     const booking = bookingSchema.parse(body);
     assertFutureDate(booking.date);
-    const pricedBooking = {
-      ...booking,
-      estimatedPrice: getEstimatedPrice(booking.service, booking.vehicleType),
-    };
 
-    const savedBooking = await saveBooking(pricedBooking);
+    const savedBooking = await saveBooking(booking);
     const notifications = await sendBookingNotifications(savedBooking);
-    const telegram = getTemporarilyDisabledTelegramStatus();
-    console.info("Telegram notification temporarily disabled for booking isolation test.", {
-      bookingId: savedBooking.id,
-    });
     const emailWarning =
       notifications.email === "skipped"
         ? "Booking saved. Email confirmations were skipped because Resend is not configured."
         : notifications.email === "failed"
           ? "Booking saved. Email confirmations could not be sent."
           : null;
-    const telegramWarning =
-      telegram === "skipped"
-        ? "Telegram notification was skipped because Telegram is not configured."
-        : telegram === "failed"
-          ? "Telegram notification could not be sent."
-          : null;
     const bookingStatus =
-      notifications.email === "sent" && telegram === "sent"
-        ? "booking_saved_email_telegram_sent"
-        : notifications.email === "sent"
-          ? "booking_saved_email_sent"
-          : notifications.email === "failed"
-            ? "booking_saved_email_failed"
-            : "booking_saved_email_skipped";
+      notifications.email === "sent"
+        ? "booking_saved_email_sent"
+        : notifications.email === "failed"
+          ? "booking_saved_email_failed"
+          : "booking_saved_email_skipped";
 
     return NextResponse.json(
       {
@@ -50,13 +31,8 @@ export async function handleBookingRequest(request: Request) {
         status: bookingStatus,
         bookingId: savedBooking.id,
         emailSent: notifications.email === "sent",
-        telegramSent: telegram === "sent",
-        estimatedPrice: savedBooking.estimatedPrice,
-        notifications: {
-          ...notifications,
-          telegram,
-        },
-        warning: [emailWarning, telegramWarning].filter(Boolean).join(" "),
+        notifications,
+        warning: emailWarning,
       },
       { status: 201 }
     );
@@ -86,27 +62,4 @@ export async function handleBookingRequest(request: Request) {
       { status: 500 }
     );
   }
-}
-
-function logBookingRequestHost(request: Request) {
-  let urlOrigin = "unknown";
-
-  try {
-    urlOrigin = new URL(request.url).origin;
-  } catch {
-    urlOrigin = "invalid_request_url";
-  }
-
-  console.info("Booking request host context", {
-    host: request.headers.get("host"),
-    forwardedHost: request.headers.get("x-forwarded-host"),
-    forwardedProto: request.headers.get("x-forwarded-proto"),
-    origin: request.headers.get("origin"),
-    referer: request.headers.get("referer"),
-    urlOrigin,
-  });
-}
-
-function getTemporarilyDisabledTelegramStatus(): "sent" | "skipped" | "failed" {
-  return "skipped";
 }

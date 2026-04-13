@@ -1,16 +1,22 @@
 import { z } from "zod";
-import { vehicleTypes as pricedVehicleTypes } from "./pricing";
 
 export const bookingServices = [
   "Full Detail",
-  "Interior Detail",
-  "Exterior Detail",
-  "Window Tint",
+  "Interior Detailing",
+  "Exterior Detailing",
   "Ceramic Coating",
+  "Window Tint",
+  "Polishing",
   "Paint Correction",
 ] as const;
 
-export const vehicleTypes = pricedVehicleTypes;
+export const vehicleTypes = [
+  "Sedan / Coupe",
+  "SUV / Crossover",
+  "Truck",
+  "Luxury / Exotic",
+  "Fleet vehicle",
+] as const;
 
 export const bookingSchema = z.object({
   service: z.enum(bookingServices),
@@ -21,7 +27,6 @@ export const bookingSchema = z.object({
   email: z.email("Enter a valid email address.").max(180),
   vehicleType: z.enum(vehicleTypes),
   address: z.string().trim().min(5, "Service location is required.").max(240),
-  estimatedPrice: z.string().trim().max(80).optional().default(""),
   notes: z.string().trim().max(800).optional().default(""),
 });
 

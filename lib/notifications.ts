@@ -17,11 +17,10 @@ export async function sendBookingNotifications(booking: BookingInput & { id: str
     sms: "skipped",
   };
 
-  const [emailResult, smsResult] = await Promise.all([
-    sendEmail(booking),
-    sendSms(booking),
-  ]);
+  const emailResult = await sendEmail(booking);
   result.email = emailResult;
+
+  const smsResult = await sendSms(booking);
   result.sms = smsResult;
 
   return result;

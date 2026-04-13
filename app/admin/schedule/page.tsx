@@ -14,7 +14,7 @@ type AdminBooking = {
   vehicleType: string;
   address: string;
   estimatedPrice: string;
-  status: "booked" | "confirmed" | "canceled";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
 };
 
 type ScheduleBlock = {
@@ -202,9 +202,10 @@ export default function ScheduleAdminPage() {
                         <p className="mt-2 text-sm text-steel">{booking.phone} / {booking.email}</p>
                       </div>
                       <select className="admin-field md:max-w-40" value={booking.status} onChange={(event) => updateStatus(booking.id, event.target.value as AdminBooking["status"])}>
-                        <option value="booked">booked</option>
+                        <option value="pending">pending</option>
                         <option value="confirmed">confirmed</option>
-                        <option value="canceled">canceled</option>
+                        <option value="cancelled">cancelled</option>
+                        <option value="completed">completed</option>
                       </select>
                     </div>
                   </article>

@@ -116,7 +116,7 @@ Set this environment variable before using it:
 ADMIN_SCHEDULE_KEY=
 ```
 
-Use a long private value. The admin page sends it as an `x-admin-key` header to the protected `POST/GET/PATCH/DELETE /api/admin/schedule` route. Admin tools can view bookings by date, block a slot, remove a block, and update booking status to `booked`, `confirmed`, or `canceled`.
+Use a long private value. The admin page sends it as an `x-admin-key` header to the protected `POST/GET/PATCH/DELETE /api/admin/schedule` route. Admin tools can view bookings by date, block a slot, remove a block, and update booking status to `pending`, `confirmed`, `cancelled`, or `completed`.
 
 If `DATABASE_URL` is set, bookings are stored in PostgreSQL. The app creates this table automatically if it does not exist:
 
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   estimated_price text,
   notes text,
   details_json text,
-  status text NOT NULL DEFAULT 'booked',
+  status text NOT NULL DEFAULT 'pending',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -170,9 +170,19 @@ Telegram admin notifications use the Telegram Bot API when both variables are pr
 ```bash
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
+TELEGRAM_WEBHOOK_SECRET=
 ```
 
-Telegram runs only from the booking backend after a booking is saved. Failures are logged server-side and do not block saved bookings.
+Telegram runs only from server routes. Booking notifications send after a booking is saved, and failures are logged server-side without blocking the customer. Inline button actions are handled by `POST /api/telegram`; configure the Telegram webhook to point to your deployed URL and set Telegram's webhook secret token to `TELEGRAM_WEBHOOK_SECRET`.
+
+Telegram booking actions support:
+
+- confirm booking
+- cancel booking
+- resend confirmation email
+- mark complete
+
+Cancelling changes booking status to `cancelled`, which releases the time slot because only `pending` and `confirmed` bookings block availability.
 
 ## SMS confirmations
 

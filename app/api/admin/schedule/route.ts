@@ -60,7 +60,7 @@ export async function PATCH(request: Request) {
   const id = String(body.id || "");
   const status = String(body.status || "") as BookingStatus;
 
-  if (!id || !["booked", "confirmed", "canceled"].includes(status)) {
+  if (!id || !["pending", "confirmed", "cancelled", "completed"].includes(status)) {
     return NextResponse.json({ ok: false, error: "Choose a valid booking and status." }, { status: 400 });
   }
 

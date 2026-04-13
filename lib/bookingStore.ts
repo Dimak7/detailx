@@ -11,7 +11,24 @@ type StoredBooking = BookingInput & {
   status: BookingStatus;
 };
 
-export type BookingStatus = "booked" | "confirmed" | "canceled";
+export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
+
+type DatabaseBookingRow = {
+  id: string;
+  service: string;
+  booking_date: Date | string;
+  booking_time: string;
+  name: string;
+  phone: string;
+  email: string;
+  vehicle_type: string;
+  address: string;
+  estimated_price: string | null;
+  notes: string | null;
+  details_json: string | null;
+  status: string | null;
+  created_at: Date | string;
+};
 
 export type ScheduleBlock = {
   id: string;
@@ -44,7 +61,7 @@ export async function saveBooking(booking: BookingInput) {
     ...booking,
     id: randomUUID(),
     createdAt: new Date().toISOString(),
-    status: "booked",
+    status: "pending",
   };
 
   const db = getPool();
@@ -66,7 +83,7 @@ export async function getAvailability(date: string): Promise<SlotAvailability[]>
     await ensureSchema(db);
     const [bookings, blocks] = await Promise.all([
       db.query<{ booking_time: string }>(
-        "SELECT booking_time FROM bookings WHERE booking_date = $1 AND status IN ('booked', 'confirmed')",
+        "SELECT booking_time FROM bookings WHERE booking_date = $1 AND status IN ('pending', 'booked', 'confirmed')",
         [date]
       ),
       db.query<{ block_time: string }>(
@@ -83,7 +100,7 @@ export async function getAvailability(date: string): Promise<SlotAvailability[]>
   const bookings = await readLocalBookings();
   const bookedTimes = new Set(
     bookings
-      .filter((booking) => booking.date === date && booking.status !== "canceled")
+      .filter((booking) => booking.date === date && isActiveBookingStatus(booking.status))
       .map((booking) => booking.time)
   );
   const blockedTimes = new Set((await readLocalBlocks()).filter((block) => block.date === date).map((block) => block.time));
@@ -96,7 +113,7 @@ export async function listBookingsByDate(date: string) {
 
   if (db) {
     await ensureSchema(db);
-    const result = await db.query(
+    const result = await db.query<DatabaseBookingRow>(
       `SELECT id, service, booking_date, booking_time, name, phone, email, vehicle_type, address,
         estimated_price, notes, details_json, status, created_at
        FROM bookings
@@ -105,27 +122,32 @@ export async function listBookingsByDate(date: string) {
       [date]
     );
 
-    return result.rows.map((row) => ({
-      id: row.id,
-      service: row.service,
-      date: formatDatabaseDate(row.booking_date),
-      time: row.booking_time,
-      name: row.name,
-      phone: row.phone,
-      email: row.email,
-      vehicleType: row.vehicle_type,
-      address: row.address,
-      estimatedPrice: row.estimated_price || "",
-      notes: row.notes || "",
-      details: safeJsonParse(row.details_json),
-      status: row.status || "booked",
-      createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
-    }));
+    return result.rows.map(mapDatabaseBooking);
   }
 
   return (await readLocalBookings())
     .filter((booking) => booking.date === date)
     .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+export async function getBookingById(id: string) {
+  const db = getPool();
+
+  if (db) {
+    await ensureSchema(db);
+    const result = await db.query<DatabaseBookingRow>(
+      `SELECT id, service, booking_date, booking_time, name, phone, email, vehicle_type, address,
+        estimated_price, notes, details_json, status, created_at
+       FROM bookings
+       WHERE id = $1
+       LIMIT 1`,
+      [id]
+    );
+    const row = result.rows[0];
+    return row ? mapDatabaseBooking(row) : null;
+  }
+
+  return (await readLocalBookings()).find((booking) => booking.id === id) || null;
 }
 
 export async function listScheduleBlocks(date: string) {
@@ -173,7 +195,7 @@ export async function createScheduleBlock(input: { date: string; time: string; r
     try {
       await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${block.date}:${block.time}`]);
       const booked = await db.query(
-        "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status IN ('booked', 'confirmed') LIMIT 1",
+        "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
         [block.date, block.time]
       );
       const blocked = await db.query(
@@ -206,7 +228,7 @@ export async function createScheduleBlock(input: { date: string; time: string; r
   }
 
   const bookings = await readLocalBookings();
-  if (bookings.some((booking) => booking.date === block.date && booking.time === block.time && booking.status !== "canceled")) {
+  if (bookings.some((booking) => booking.date === block.date && booking.time === block.time && isActiveBookingStatus(booking.status))) {
     throw new Error("That slot already has a booking.");
   }
 
@@ -233,11 +255,11 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
 
   if (db) {
     await ensureSchema(db);
-    if (status === "booked" || status === "confirmed") {
+    if (status === "pending" || status === "confirmed") {
       await db.query("BEGIN");
       try {
-        const current = await db.query<{ booking_date: Date | string; booking_time: string }>(
-          "SELECT booking_date, booking_time FROM bookings WHERE id = $1 LIMIT 1",
+        const current = await db.query<{ booking_date: Date | string; booking_time: string; status: string | null }>(
+          "SELECT booking_date, booking_time, status FROM bookings WHERE id = $1 LIMIT 1",
           [id]
         );
         const booking = current.rows[0];
@@ -246,10 +268,11 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
           throw new Error("Booking was not found.");
         }
 
+        assertStatusTransition(normalizeBookingStatus(booking.status), status);
         const date = formatDatabaseDate(booking.booking_date);
         await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${date}:${booking.booking_time}`]);
         const conflict = await db.query(
-          "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND id <> $3 AND status IN ('booked', 'confirmed') LIMIT 1",
+          "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND id <> $3 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
           [date, booking.booking_time, id]
         );
         const block = await db.query(
@@ -270,6 +293,12 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
       }
     }
 
+    const current = await db.query<{ status: string | null }>("SELECT status FROM bookings WHERE id = $1 LIMIT 1", [id]);
+    const existing = current.rows[0];
+    if (!existing) {
+      throw new Error("Booking was not found.");
+    }
+    assertStatusTransition(normalizeBookingStatus(existing.status), status);
     await db.query("UPDATE bookings SET status = $2 WHERE id = $1", [id, status]);
     return;
   }
@@ -277,13 +306,19 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
   const bookings = await readLocalBookings();
   const target = bookings.find((booking) => booking.id === id);
 
-  if (target && status !== "canceled") {
+  if (!target) {
+    throw new Error("Booking was not found.");
+  }
+
+  assertStatusTransition(target.status, status);
+
+  if (status === "pending" || status === "confirmed") {
     const conflict = bookings.some(
       (booking) =>
         booking.id !== id &&
         booking.date === target.date &&
         booking.time === target.time &&
-        booking.status !== "canceled"
+        isActiveBookingStatus(booking.status)
     );
 
     const blocks = await readLocalBlocks();
@@ -302,7 +337,7 @@ async function saveToDatabase(db: Pool, storedBooking: StoredBooking) {
   try {
     await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${storedBooking.date}:${storedBooking.time}`]);
     const existingBooking = await db.query(
-      "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status IN ('booked', 'confirmed') LIMIT 1",
+      "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
       [storedBooking.date, storedBooking.time]
     );
     const block = await db.query(
@@ -372,7 +407,8 @@ async function ensureSchema(db: Pool) {
 
   await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS estimated_price text");
   await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS details_json text");
-  await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'booked'");
+  await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending'");
+  await db.query("ALTER TABLE bookings ALTER COLUMN status SET DEFAULT 'pending'");
   await db.query(`
     CREATE TABLE IF NOT EXISTS schedule_blocks (
       id uuid PRIMARY KEY,
@@ -394,7 +430,7 @@ async function saveToLocalJsonWithAvailability(booking: StoredBooking) {
     throw new Error("This time is no longer available. Please choose another slot.");
   }
 
-  if (bookings.some((item) => item.date === booking.date && item.time === booking.time && item.status !== "canceled")) {
+  if (bookings.some((item) => item.date === booking.date && item.time === booking.time && isActiveBookingStatus(item.status))) {
     throw new Error("This time is no longer available. Please choose another slot.");
   }
 
@@ -415,7 +451,7 @@ async function readLocalBookings() {
     bookings = [];
   }
 
-  return bookings.map((booking) => ({ ...booking, status: (booking.status || "booked") as BookingStatus }));
+  return bookings.map((booking) => ({ ...booking, status: normalizeBookingStatus(booking.status) }));
 }
 
 async function writeLocalBookings(bookings: StoredBooking[]) {
@@ -450,6 +486,59 @@ function buildAvailability(bookedTimes: Set<string>, blockedTimes: Set<string>):
     available: !bookedTimes.has(time) && !blockedTimes.has(time),
     reason: bookedTimes.has(time) ? "booked" : blockedTimes.has(time) ? "blocked" : undefined,
   }));
+}
+
+function mapDatabaseBooking(row: DatabaseBookingRow): StoredBooking {
+  return {
+    id: row.id,
+    service: row.service as StoredBooking["service"],
+    date: formatDatabaseDate(row.booking_date),
+    time: row.booking_time as StoredBooking["time"],
+    name: row.name,
+    phone: row.phone,
+    email: row.email,
+    vehicleType: row.vehicle_type as StoredBooking["vehicleType"],
+    address: row.address,
+    estimatedPrice: row.estimated_price || "",
+    notes: row.notes || "",
+    details: safeJsonParse(row.details_json) as StoredBooking["details"],
+    status: normalizeBookingStatus(row.status),
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+  };
+}
+
+function normalizeBookingStatus(status: string | undefined | null): BookingStatus {
+  if (status === "confirmed" || status === "completed" || status === "cancelled") {
+    return status;
+  }
+
+  if (status === "canceled") {
+    return "cancelled";
+  }
+
+  return "pending";
+}
+
+function isActiveBookingStatus(status: BookingStatus) {
+  return status === "pending" || status === "confirmed";
+}
+
+function assertStatusTransition(current: BookingStatus, next: BookingStatus) {
+  if (current === next) {
+    return;
+  }
+
+  if (current === "cancelled") {
+    throw new Error("Cancelled bookings cannot be changed from Telegram/admin controls.");
+  }
+
+  if (current === "completed") {
+    throw new Error("Completed bookings cannot be changed from Telegram/admin controls.");
+  }
+
+  if (next === "completed" && current !== "confirmed") {
+    throw new Error("Only confirmed bookings can be marked complete.");
+  }
 }
 
 function safeJsonParse(value: string | null) {

@@ -26,6 +26,12 @@ export async function handleBookingRequest(request: Request) {
     };
 
     const savedBooking = await saveBooking(pricedBooking);
+    console.info("Booking saved", {
+      bookingId: savedBooking.id,
+      date: savedBooking.date,
+      time: savedBooking.time,
+      status: savedBooking.status,
+    });
     const notifications = await sendBookingNotifications(savedBooking);
     const telegram = await sendTelegramBookingNotification(savedBooking);
     const emailWarning =

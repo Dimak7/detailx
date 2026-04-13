@@ -55,17 +55,17 @@ export async function sendTelegramBookingNotification(booking: TelegramBooking):
 function buildTelegramBookingMessage(booking: TelegramBooking) {
   return [
     "<b>New DETAILX Booking</b>",
-    `Name: ${escapeTelegramHtml(booking.name)}`,
-    `Phone: ${escapeTelegramHtml(booking.phone)}`,
-    `Email: ${escapeTelegramHtml(booking.email)}`,
-    `Service: ${escapeTelegramHtml(booking.service)}`,
-    `Vehicle: ${escapeTelegramHtml(booking.vehicleType)}`,
-    `Price: ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
-    `Date: ${escapeTelegramHtml(booking.date)}`,
-    `Time: ${escapeTelegramHtml(booking.time)}`,
-    `Location: ${escapeTelegramHtml(booking.address)}`,
-    `Notes: ${escapeTelegramHtml(booking.notes || "No extra notes provided.")}`,
-    `Booking ID: ${escapeTelegramHtml(booking.id)}`,
+    "",
+    `<b>Name:</b> ${escapeTelegramHtml(booking.name)}`,
+    `<b>Phone:</b> ${escapeTelegramHtml(booking.phone)}`,
+    `<b>Email:</b> ${escapeTelegramHtml(booking.email)}`,
+    `<b>Service:</b> ${escapeTelegramHtml(booking.service)}`,
+    `<b>Vehicle:</b> ${escapeTelegramHtml(booking.vehicleType)}`,
+    `<b>Price:</b> ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
+    `<b>Date:</b> ${escapeTelegramHtml(booking.date)}`,
+    `<b>Time:</b> ${escapeTelegramHtml(booking.time)}`,
+    `<b>Location:</b> ${escapeTelegramHtml(booking.address)}`,
+    `<b>Notes:</b> ${escapeTelegramHtml(booking.notes || "N/A")}`,
   ].join("\n");
 }
 

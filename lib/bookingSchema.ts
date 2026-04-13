@@ -29,7 +29,7 @@ export const bookingSchema = z.object({
   address: z.string().trim().min(5, "Service location is required.").max(240),
   estimatedPrice: z.string().trim().max(80).optional().default(""),
   notes: z.string().trim().max(800).optional().default(""),
-  details: z.array(bookingDetailSchema).min(1).max(2).optional(),
+  details: z.array(bookingDetailSchema).min(1).max(6).optional(),
 });
 
 export type BookingInput = z.infer<typeof bookingSchema>;

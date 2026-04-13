@@ -1,22 +1,34 @@
 "use client";
 
 import { FormEvent, useMemo, useRef, useState } from "react";
-import { buildBookingEstimate, getStartingPriceLabel, pricedServices, vehicleTypes } from "@/lib/pricing";
+import {
+  buildBookingEstimate,
+  getStartingPriceLabel,
+  pricedServices,
+  vehicleTypes,
+  type BookingDetailSelection,
+  type BookingService,
+  type VehicleType,
+} from "@/lib/pricing";
 
 const timeSlots = ["8:00 AM", "10:30 AM", "1:00 PM", "3:30 PM", "6:00 PM"];
+const maxDetails = 6;
 
 type Status = {
   type: "idle" | "success" | "error";
   message: string;
 };
 
+type ServiceCounts = Record<BookingService, number>;
+
+const initialServiceCounts = pricedServices.reduce((counts, service, index) => {
+  counts[service.title] = index === 0 ? 1 : 0;
+  return counts;
+}, {} as ServiceCounts);
+
 export function BookingForm() {
-  const [selectedService, setSelectedService] = useState<(typeof pricedServices)[number]["title"]>(pricedServices[0].title);
-  const [selectedVehicle, setSelectedVehicle] = useState<(typeof vehicleTypes)[number]>("Sedan");
-  const [hasSecondDetail, setHasSecondDetail] = useState(false);
-  const [secondService, setSecondService] = useState<(typeof pricedServices)[number]["title"]>(pricedServices[1].title);
-  const [secondVehicle, setSecondVehicle] = useState<(typeof vehicleTypes)[number]>("Sedan");
-  const [secondNotes, setSecondNotes] = useState("");
+  const [serviceCounts, setServiceCounts] = useState<ServiceCounts>(initialServiceCounts);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>("Sedan");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [cursor, setCursor] = useState(() => {
@@ -29,12 +41,11 @@ export function BookingForm() {
 
   const calendarDays = useMemo(() => buildCalendar(cursor), [cursor]);
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const bookingEstimate = buildBookingEstimate([
-    { service: selectedService, vehicleType: selectedVehicle },
-    ...(hasSecondDetail ? [{ service: secondService, vehicleType: secondVehicle, notes: secondNotes }] : []),
-  ]);
+  const selectedDetails = buildDetailsFromCounts(serviceCounts, selectedVehicle);
+  const bookingEstimate = buildBookingEstimate(selectedDetails);
   const estimatedPrice = bookingEstimate.estimatedPrice;
-  const selectedServiceData = pricedServices.find((service) => service.title === selectedService) ?? pricedServices[0];
+  const totalDetails = selectedDetails.length;
+  const primaryDetail = selectedDetails[0] ?? { service: pricedServices[0].title, vehicleType: selectedVehicle };
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +57,11 @@ export function BookingForm() {
       return;
     }
 
+    if (!selectedDetails.length) {
+      setStatus({ type: "error", message: "Add at least one detail before requesting your booking." });
+      return;
+    }
+
     if (!selectedDate || !selectedTime) {
       setStatus({ type: "error", message: "Choose a date and time before requesting your detail." });
       return;
@@ -54,15 +70,13 @@ export function BookingForm() {
     const formData = new FormData(form);
     const payload: Record<string, unknown> = Object.fromEntries(formData.entries());
     const primaryNotes = String(payload.notes || "");
-    payload.service = selectedService;
+    const details = selectedDetails.map((detail) => ({ ...detail, notes: primaryNotes }));
+    payload.service = primaryDetail.service;
     payload.vehicleType = selectedVehicle;
     payload.estimatedPrice = estimatedPrice;
     payload.date = selectedDate;
     payload.time = selectedTime;
-    payload.details = [
-      { service: selectedService, vehicleType: selectedVehicle, notes: primaryNotes },
-      ...(hasSecondDetail ? [{ service: secondService, vehicleType: secondVehicle, notes: secondNotes }] : []),
-    ];
+    payload.details = details;
 
     setLoading(true);
     try {
@@ -78,12 +92,8 @@ export function BookingForm() {
       }
 
       (formRef.current ?? form)?.reset();
-      setSelectedService(pricedServices[0].title);
+      setServiceCounts(initialServiceCounts);
       setSelectedVehicle("Sedan");
-      setHasSecondDetail(false);
-      setSecondService(pricedServices[1].title);
-      setSecondVehicle("Sedan");
-      setSecondNotes("");
       setSelectedDate("");
       setSelectedTime("");
       setStatus({
@@ -111,9 +121,25 @@ export function BookingForm() {
     }
   }
 
+  function updateServiceCount(service: BookingService, change: number) {
+    setServiceCounts((current) => {
+      const nextTotal = getDetailCount(current) + change;
+      const nextCount = Math.max(0, current[service] + change);
+
+      if (nextTotal < 1 || nextTotal > maxDetails) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [service]: nextCount,
+      };
+    });
+  }
+
   return (
     <form ref={formRef} className="rounded-lg bg-white p-3 text-ink shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-5" onSubmit={submitBooking}>
-      <input name="service" type="hidden" value={selectedService} />
+      <input name="service" type="hidden" value={primaryDetail.service} />
       <input name="vehicleType" type="hidden" value={selectedVehicle} />
       <input name="estimatedPrice" type="hidden" value={estimatedPrice} />
 
@@ -124,7 +150,7 @@ export function BookingForm() {
             <h3 className="mt-2 text-2xl font-black uppercase leading-none">Build your detail.</h3>
           </div>
           <div className="rounded-lg bg-white px-4 py-3 text-right text-ink">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-steel">Estimate</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-steel">{totalDetails} detail{totalDetails === 1 ? "" : "s"}</p>
             <p className="text-2xl font-black leading-none">{estimatedPrice}</p>
           </div>
         </div>
@@ -132,33 +158,40 @@ export function BookingForm() {
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {pricedServices.map((service) => {
-          const active = service.title === selectedService;
+          const count = serviceCounts[service.title];
+          const active = count > 0;
           return (
-            <button
-              aria-pressed={active}
-              className={`group overflow-hidden rounded-lg border text-left transition hover:-translate-y-0.5 ${active ? "border-red bg-ink text-white shadow-[0_18px_48px_rgba(193,18,31,0.2)]" : "border-ink/10 bg-smoke text-ink hover:border-red/40"}`}
+            <article
+              className={`group overflow-hidden rounded-lg border text-left transition ${active ? "border-red bg-ink text-white shadow-[0_18px_48px_rgba(193,18,31,0.2)]" : "border-ink/10 bg-smoke text-ink hover:border-red/40"}`}
               key={service.title}
-              onClick={() => setSelectedService(service.title)}
-              type="button"
             >
               <div className="relative h-28 overflow-hidden">
                 <div className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-105" style={{ backgroundImage: `url(${service.image})` }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-transparent" />
                 <span className="absolute left-3 top-3 rounded-lg bg-red px-2.5 py-1 text-xs font-black uppercase text-white">{service.code}</span>
+                <div className="absolute right-3 top-3 flex items-center gap-1 rounded-lg bg-white p-1 text-ink shadow-lg">
+                  <button aria-label={`Remove ${service.title}`} className="grid h-8 w-8 place-items-center rounded-md bg-smoke text-lg font-black transition hover:bg-red-soft disabled:opacity-40" disabled={count === 0 || totalDetails === 1} onClick={() => updateServiceCount(service.title, -1)} type="button">
+                    -
+                  </button>
+                  <span className="min-w-8 text-center text-sm font-black">{count}</span>
+                  <button aria-label={`Add ${service.title}`} className="grid h-8 w-8 place-items-center rounded-md bg-red text-lg font-black text-white transition hover:bg-red-dark disabled:opacity-40" disabled={totalDetails >= maxDetails} onClick={() => updateServiceCount(service.title, 1)} type="button">
+                    +
+                  </button>
+                </div>
               </div>
               <div className="p-4">
                 <p className={`text-xs font-black uppercase ${active ? "text-red-soft" : "text-red"}`}>{service.tone}</p>
                 <h4 className="mt-1 text-lg font-black uppercase leading-none">{service.title}</h4>
                 <p className={`mt-2 text-sm font-black ${active ? "text-white" : "text-ink"}`}>{getStartingPriceLabel(service.title)}</p>
               </div>
-            </button>
+            </article>
           );
         })}
       </div>
 
       <div className="mt-4 grid gap-3 rounded-lg border border-ink/10 bg-smoke p-4 md:grid-cols-[1fr_0.86fr]">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">First detail vehicle</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle size</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {vehicleTypes.map((vehicle) => (
               <button
@@ -173,59 +206,11 @@ export function BookingForm() {
           </div>
         </div>
         <aside className="rounded-lg bg-white p-4 ring-1 ring-ink/10">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-steel">Selected</p>
-          <p className="mt-2 text-2xl font-black uppercase leading-none">{selectedServiceData.title}</p>
-          <p className="mt-2 text-sm leading-6 text-steel">{selectedServiceData.description}</p>
-          <div className="mt-4 rounded-lg bg-red-soft px-4 py-3">
-            <p className="text-xs font-black uppercase text-red">First detail</p>
-            <p className="mt-1 text-sm font-bold">{bookingEstimate.details[0]?.estimatedPrice}</p>
-          </div>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-steel">Offer</p>
+          <p className="mt-2 text-2xl font-black uppercase leading-none">{bookingEstimate.discountApplied ? "10% discount applied" : "Add more to save"}</p>
+          <p className="mt-2 text-sm leading-6 text-steel">Every added detail after the first receives 10% off. Mix services like Exterior Detail plus Interior Detail.</p>
         </aside>
       </div>
-
-      {hasSecondDetail ? (
-        <div className="mt-4 rounded-lg border border-red/30 bg-white p-4 ring-1 ring-ink/10">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Second detail</p>
-              <h4 className="mt-1 text-2xl font-black uppercase leading-none">10% off additional detail</h4>
-            </div>
-            <button className="rounded-lg border border-ink/10 px-4 py-2 text-sm font-black uppercase text-ink transition hover:border-red/40" type="button" onClick={() => setHasSecondDetail(false)}>
-              Remove
-            </button>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_0.9fr]">
-            <label className="form-label">
-              Service
-              <select className="field" value={secondService} onChange={(event) => setSecondService(event.target.value as typeof secondService)}>
-                {pricedServices.map((service) => (
-                  <option key={service.title} value={service.title}>{service.title} - {getStartingPriceLabel(service.title)}</option>
-                ))}
-              </select>
-            </label>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle</p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {vehicleTypes.map((vehicle) => (
-                  <button
-                    className={`rounded-lg px-3 py-3 text-sm font-black uppercase transition ${secondVehicle === vehicle ? "bg-red text-white" : "bg-smoke text-ink ring-1 ring-ink/10 hover:ring-red/40"}`}
-                    key={vehicle}
-                    onClick={() => setSecondVehicle(vehicle)}
-                    type="button"
-                  >
-                    {vehicle}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <label className="form-label mt-4">Second detail notes<textarea className="field min-h-24 resize-y" value={secondNotes} onChange={(event) => setSecondNotes(event.target.value)} maxLength={500} placeholder="Vehicle two notes, access, condition, service goals..." /></label>
-        </div>
-      ) : (
-        <button className="mt-4 w-full rounded-lg border border-red/30 bg-red-soft px-5 py-4 text-center font-black uppercase text-ink transition hover:-translate-y-0.5 hover:border-red" type="button" onClick={() => setHasSecondDetail(true)}>
-          Add Another Detail - get 10% off
-        </button>
-      )}
 
       <div className="mt-4 rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Booking summary</p>
@@ -288,7 +273,7 @@ export function BookingForm() {
         <label className="form-label">Email<input className="field" name="email" type="email" required placeholder="you@email.com" /></label>
         <label className="form-label">Service location<input className="field" name="address" minLength={5} required placeholder="Chicago address or neighborhood" /></label>
       </div>
-      <label className="form-label mt-4">Optional notes<textarea className="field min-h-28 resize-y" name="notes" maxLength={800} placeholder="Parking access, pet hair, stains, coating goals, tint questions, or an additional detail..." /></label>
+      <label className="form-label mt-4">Optional notes<textarea className="field min-h-28 resize-y" name="notes" maxLength={800} placeholder="Parking access, pet hair, stains, coating goals, tint questions..." /></label>
       <button className="mt-5 w-full rounded-lg bg-red px-6 py-4 font-black uppercase text-white shadow-[0_16px_42px_rgba(193,18,31,0.25)] transition hover:-translate-y-0.5 hover:bg-red-dark disabled:cursor-not-allowed disabled:opacity-60" disabled={loading} type="submit">
         {loading ? "Requesting..." : `Request Booking - ${estimatedPrice}`}
       </button>
@@ -330,6 +315,19 @@ export function BookingForm() {
       `}</style>
     </form>
   );
+}
+
+function buildDetailsFromCounts(counts: ServiceCounts, vehicleType: VehicleType): BookingDetailSelection[] {
+  return pricedServices.flatMap((service) =>
+    Array.from({ length: counts[service.title] }, () => ({
+      service: service.title,
+      vehicleType,
+    }))
+  );
+}
+
+function getDetailCount(counts: ServiceCounts) {
+  return Object.values(counts).reduce((total, count) => total + count, 0);
 }
 
 function getSuccessMessage(result: { status?: string; emailSent?: boolean; warning?: string }) {

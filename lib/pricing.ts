@@ -85,6 +85,7 @@ export type BookingEstimate = {
   estimatedPrice: string;
   totalAmount: number;
   hasStartingAtPricing: boolean;
+  discountApplied: boolean;
 };
 
 export function getServicePricing(service: string) {
@@ -145,8 +146,8 @@ export function getStartingPriceLabel(service: string) {
 }
 
 export function buildBookingEstimate(details: BookingDetailSelection[]): BookingEstimate {
-  const normalizedDetails = details.slice(0, 2).map((detail, index) => {
-    const discountPercent = index === 1 ? 10 : 0;
+  const normalizedDetails = details.map((detail, index) => {
+    const discountPercent = index > 0 ? 10 : 0;
     const quote = getPriceQuote(detail.service, detail.vehicleType, discountPercent);
 
     return {
@@ -168,6 +169,7 @@ export function buildBookingEstimate(details: BookingDetailSelection[]): Booking
     estimatedPrice: formatPrice(totalAmount, hasStartingAtPricing),
     totalAmount,
     hasStartingAtPricing,
+    discountApplied: normalizedDetails.length > 1,
   };
 }
 

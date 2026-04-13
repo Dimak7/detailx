@@ -19,7 +19,7 @@ export async function handleBookingRequest(request: Request) {
 
     const savedBooking = await saveBooking(pricedBooking);
     const notifications = await sendBookingNotifications(savedBooking);
-    const telegram = "skipped";
+    const telegram = getTemporarilyDisabledTelegramStatus();
     console.info("Telegram notification temporarily disabled for booking isolation test.", {
       bookingId: savedBooking.id,
     });
@@ -105,4 +105,8 @@ function logBookingRequestHost(request: Request) {
     referer: request.headers.get("referer"),
     urlOrigin,
   });
+}
+
+function getTemporarilyDisabledTelegramStatus(): "sent" | "skipped" | "failed" {
+  return "skipped";
 }

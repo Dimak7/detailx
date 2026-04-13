@@ -1,47 +1,11 @@
-export const services = [
-  {
-    title: "Full Detail",
-    code: "FD",
-    tone: "Interior + exterior",
-    description: "A complete reset for the cabin, paint, wheels, trim, glass, and final presentation.",
-  },
-  {
-    title: "Interior Detailing",
-    code: "IN",
-    tone: "Cabin refresh",
-    description: "Deep vacuuming, panels, vents, cupholders, leather care, fabric attention, and odor-minded cleanup.",
-  },
-  {
-    title: "Exterior Detailing",
-    code: "EX",
-    tone: "Clean contact",
-    description: "Foam wash, wheels, decontamination options, trim finish, glass, tires, and crisp exterior handoff.",
-  },
-  {
-    title: "Ceramic Coating",
-    code: "CC",
-    tone: "Protection",
-    description: "Surface prep and coating requests for stronger gloss, easier maintenance, and durable protection.",
-  },
-  {
-    title: "Window Tint",
-    code: "WT",
-    tone: "Privacy + comfort",
-    description: "Tint requests structured for a clean look, heat control, and a more finished vehicle profile.",
-  },
-  {
-    title: "Polishing",
-    code: "PO",
-    tone: "Gloss lift",
-    description: "Gloss enhancement for dull paint, light wash marks, haze, and a sharper reflective finish.",
-  },
-  {
-    title: "Paint Correction",
-    code: "PC",
-    tone: "Clarity work",
-    description: "Correction-focused service for swirls, oxidation, haze, and deeper paint clarity before protection.",
-  },
-];
+import { pricedServices } from "./pricing";
+
+export const services = pricedServices.map(({ title, code, tone, description }) => ({
+  title,
+  code,
+  tone,
+  description,
+}));
 
 export const galleryImages = [
   {
@@ -57,7 +21,7 @@ export const galleryImages = [
   {
     src: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=900&q=88",
     alt: "Polished performance car exterior",
-    label: "Polishing",
+    label: "Paint clarity",
   },
   {
     src: "https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?auto=format&fit=crop&w=900&q=88",
@@ -102,7 +66,7 @@ export const testimonials = [
     neighborhood: "River North",
   },
   {
-    quote: "I booked polishing before listing my coupe. The paint had a cleaner reflection and the communication was excellent.",
+    quote: "I booked paint correction before listing my coupe. The paint had a cleaner reflection and the communication was excellent.",
     name: "Jordan P.",
     neighborhood: "Lakeview",
   },

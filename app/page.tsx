@@ -258,15 +258,15 @@ function Booking() {
           <p className="eyebrow">Reservations</p>
           <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Choose the detail. We bring the standard.</h2>
           <p className="mt-6 leading-8 text-ash">
-            Pick your service, date, time, and vehicle details. The API stores your reservation, sends email confirmation when configured, and can send SMS through Twilio when credentials are present.
+            Choose the service, vehicle size, date, and time. Pricing updates as you build the reservation, then the backend saves your request and sends confirmation through Resend.
           </p>
           <div className="mt-8 grid gap-3">
-            {["Saved server-side", "Email confirmation ready", "Optional SMS support"].map((item) => (
+            {["Live price estimate", "Resend confirmation", "Telegram admin alert"].map((item) => (
               <div className="rounded-lg border border-white/[0.12] bg-white/[0.08] px-4 py-3 text-sm font-black uppercase" key={item}>{item}</div>
             ))}
           </div>
         </div>
-        <BookingForm services={services.map((service) => service.title)} />
+        <BookingForm />
       </div>
     </section>
   );
@@ -279,7 +279,7 @@ function Instagram() {
         <div>
           <p className="eyebrow">Instagram</p>
           <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-5xl">More gloss, more transformations.</h2>
-          <p className="mt-5 max-w-2xl leading-8 text-steel">Follow @detailxchicago for recent details, coating work, polishing results, and real Chicago mobile appointments.</p>
+          <p className="mt-5 max-w-2xl leading-8 text-steel">Follow @detailxchicago for recent details, coating work, paint correction results, and real Chicago mobile appointments.</p>
           <a className="mt-7 inline-flex items-center justify-center gap-3 rounded-lg bg-red px-6 py-4 text-center font-black text-white transition hover:-translate-y-0.5 hover:bg-red-dark" href="https://www.instagram.com/detailxchicago/" target="_blank" rel="noreferrer">
             <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
               <rect width="16" height="16" x="4" y="4" stroke="currentColor" strokeWidth="2" rx="5" />

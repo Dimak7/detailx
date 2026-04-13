@@ -1,6 +1,6 @@
 # DETAILX Chicago
 
-Premium mobile detailing website for DETAILX Chicago, built as a production-friendly Next.js app with Tailwind CSS styling, an API-backed booking flow, database persistence, email confirmations, and optional SMS support.
+Premium mobile detailing website for DETAILX Chicago, built as a production-friendly Next.js app with Tailwind CSS styling, an API-backed booking flow, database persistence, dynamic pricing, email confirmations, Telegram admin notifications, and optional SMS support.
 
 ## Stack
 
@@ -10,6 +10,7 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 - PostgreSQL via `pg`
 - Local JSON booking fallback for development
 - Resend for email confirmations
+- Telegram Bot API for booking notifications
 - Twilio for optional SMS confirmations
 - Zod for request validation
 
@@ -31,8 +32,10 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 |   |-- bookingSchema.ts
 |   |-- bookingStore.ts
 |   |-- notifications.ts
+|   |-- pricing.ts
 |   |-- resend.ts
-|   `-- siteData.ts
+|   |-- siteData.ts
+|   `-- telegram.ts
 |-- .env.example
 |-- package.json
 |-- next.config.mjs
@@ -76,8 +79,11 @@ Validated fields:
 - phone
 - email
 - vehicle type
+- estimated price
 - address or service location
 - optional notes
+
+Pricing logic lives in `lib/pricing.ts`. The booking API recomputes the estimate server-side before saving the booking.
 
 If `DATABASE_URL` is set, bookings are stored in PostgreSQL. The app creates this table automatically if it does not exist:
 
@@ -92,6 +98,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   email text NOT NULL,
   vehicle_type text NOT NULL,
   address text NOT NULL,
+  estimated_price text,
   notes text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -106,10 +113,22 @@ Email confirmations use Resend. Set:
 ```bash
 RESEND_API_KEY=
 BUSINESS_EMAIL=sales@detailxchicago.com
+EMAIL_FROM=bookings@detailxchicago.com
 RESEND_FROM_EMAIL=bookings@detailxchicago.com
 ```
 
-`RESEND_FROM_EMAIL` must be on a verified Resend domain. Use `bookings@detailxchicago.com` when that sender is ready; otherwise set it to another verified sender such as `hello@detailxchicago.com` or `sales@detailxchicago.com`. After a booking is saved, the app sends a customer confirmation email and a business notification email to `BUSINESS_EMAIL`. If email sending fails or variables are missing, the booking still saves and the API returns a warning without crashing the customer flow.
+`EMAIL_FROM` must be on a verified Resend domain. Use `bookings@detailxchicago.com` when that sender is ready; otherwise set it to another verified sender such as `hello@detailxchicago.com` or `sales@detailxchicago.com`. `RESEND_FROM_EMAIL` is still supported as a fallback for existing deployments. After a booking is saved, the app sends a customer confirmation email and a business notification email to `BUSINESS_EMAIL`. If email sending fails or variables are missing, the booking still saves and the API returns a warning without crashing the customer flow.
+
+## Telegram booking notifications
+
+Telegram admin notifications use the Telegram Bot API when both variables are present:
+
+```bash
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+```
+
+Telegram runs only from the booking backend after a booking is saved. Failures are logged server-side and do not block saved bookings.
 
 ## SMS confirmations
 

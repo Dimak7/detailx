@@ -3,15 +3,22 @@ import { ZodError } from "zod";
 import { assertFutureDate, bookingSchema } from "./bookingSchema";
 import { saveBooking } from "./bookingStore";
 import { sendBookingNotifications } from "./notifications";
+import { getEstimatedPrice } from "./pricing";
+import { sendTelegramBookingNotification } from "./telegram";
 
 export async function handleBookingRequest(request: Request) {
   try {
     const body = await request.json();
     const booking = bookingSchema.parse(body);
     assertFutureDate(booking.date);
+    const pricedBooking = {
+      ...booking,
+      estimatedPrice: getEstimatedPrice(booking.service, booking.vehicleType),
+    };
 
-    const savedBooking = await saveBooking(booking);
+    const savedBooking = await saveBooking(pricedBooking);
     const notifications = await sendBookingNotifications(savedBooking);
+    const telegram = await sendTelegramBookingNotification(savedBooking);
     const emailWarning =
       notifications.email === "skipped"
         ? "Booking saved. Email confirmations were skipped because Resend is not configured."
@@ -31,7 +38,12 @@ export async function handleBookingRequest(request: Request) {
         status: bookingStatus,
         bookingId: savedBooking.id,
         emailSent: notifications.email === "sent",
-        notifications,
+        telegramSent: telegram === "sent",
+        estimatedPrice: savedBooking.estimatedPrice,
+        notifications: {
+          ...notifications,
+          telegram,
+        },
         warning: emailWarning,
       },
       { status: 201 }

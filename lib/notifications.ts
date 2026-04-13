@@ -5,12 +5,12 @@ import {
   sendBusinessBookingNotification,
   sendCustomerBookingConfirmation,
 } from "./resend";
-import { sendTelegramBookingNotification, type TelegramNotificationStatus } from "./telegram";
+import { sendTelegramBookingNotification } from "./telegram";
 
 type NotificationResult = {
   email: "sent" | "skipped" | "failed";
   sms: "sent" | "skipped" | "failed";
-  telegram: TelegramNotificationStatus;
+  telegram: "sent" | "skipped" | "failed";
 };
 
 export async function sendBookingNotifications(booking: BookingInput & { id: string }) {

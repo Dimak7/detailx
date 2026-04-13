@@ -1,12 +1,8 @@
+import "server-only";
 import type { BookingInput } from "./bookingSchema";
 
 type TelegramBooking = BookingInput & { id: string };
-
-export type TelegramNotificationStatus = "sent" | "skipped" | "failed";
-
-export function isTelegramConfigured() {
-  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
-}
+type TelegramNotificationStatus = "sent" | "skipped" | "failed";
 
 export async function sendTelegramBookingNotification(booking: TelegramBooking): Promise<TelegramNotificationStatus> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;

@@ -4,9 +4,10 @@ import { Nav } from "@/components/Nav";
 import { galleryImages, processSteps, reasons, services, testimonials } from "@/lib/siteData";
 
 const proofPoints = [
-  ["Chicago mobile", "Homes, garages, offices, and approved parking locations."],
-  ["Paint-conscious process", "Prep, product choice, and final inspection matter."],
-  ["Backend booking", "Reservations are saved with email and optional SMS support."],
+  ["Quality Work", "Careful details. Sharp finish."],
+  ["Simple Process", "Choose a time. We come to you."],
+  ["Transparent Pricing", "Clear estimates before you book."],
+  ["We Save Your Time", "Premium care without the shop detour."],
 ];
 
 const faqItems = [
@@ -21,13 +22,13 @@ export default function Home() {
     <main className="overflow-hidden bg-smoke">
       <Nav />
       <Hero />
+      <Booking />
       <ProofStrip />
       <FeaturedServices />
       <Difference />
       <Gallery />
       <Process />
       <Testimonials />
-      <Booking />
       <Instagram />
       <Faq />
       <ContactFooter />
@@ -70,6 +71,9 @@ function Hero() {
                 View Our Work
               </a>
             </div>
+            <a className="mt-5 inline-flex text-sm font-black uppercase text-ash transition hover:text-white" href="tel:3129299580">
+              Call 3129299580
+            </a>
           </div>
 
           <aside className="rounded-lg border border-white/[0.14] bg-ink/[0.72] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur">
@@ -92,7 +96,7 @@ function Hero() {
 
 function ProofStrip() {
   return (
-    <section className="content-shell relative z-10 -mt-10 grid overflow-hidden rounded-lg border border-white/10 bg-ink text-white shadow-[0_24px_90px_rgba(5,5,6,0.34)] md:grid-cols-3">
+    <section className="content-shell relative z-10 -mt-10 grid overflow-hidden rounded-lg border border-white/10 bg-ink text-white shadow-[0_24px_90px_rgba(5,5,6,0.34)] md:grid-cols-4">
       {proofPoints.map(([title, description]) => (
         <article className="border-white/10 p-6 md:border-r md:last:border-r-0" key={title}>
           <p className="font-black uppercase">{title}</p>
@@ -182,19 +186,10 @@ function Gallery() {
   return (
     <section className="section-pad bg-ink text-white" id="work">
       <div className="content-shell">
-        <div className="grid gap-6 md:grid-cols-[1fr_0.7fr] md:items-end">
-          <div>
-            <p className="eyebrow">Results</p>
-            <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Proof belongs in the finish.</h2>
-          </div>
-          <p className="text-ash">Use this gallery direction for real DETAILX work as the brand grows: interiors, paint clarity, ceramic-ready gloss, and before/after transformations.</p>
-        </div>
-        <div className="mt-12 grid auto-rows-[250px] gap-4 md:grid-cols-5">
+        <div className="flex snap-x gap-4 overflow-x-auto pb-4 md:grid md:auto-rows-[260px] md:grid-cols-5 md:overflow-visible md:pb-0">
           {galleryImages.map((image, index) => (
-            <figure className={`group relative overflow-hidden rounded-lg ${index === 0 ? "md:col-span-3 md:row-span-2" : "md:col-span-2"}`} key={image.src}>
+            <figure className={`group relative h-[320px] min-w-[78vw] snap-center overflow-hidden rounded-lg md:h-auto md:min-w-0 ${index === 0 ? "md:col-span-3 md:row-span-2" : "md:col-span-2"}`} key={image.src}>
               <Image src={image.src} alt={image.alt} fill className="object-cover transition duration-500 group-hover:scale-105" sizes="(min-width: 768px) 40vw, 100vw" />
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/[0.85] via-ink/10 to-transparent" />
-              <figcaption className="absolute bottom-4 left-4 rounded-lg bg-white px-3 py-2 text-sm font-black uppercase text-ink ring-2 ring-red">{image.label}</figcaption>
             </figure>
           ))}
         </div>
@@ -226,6 +221,8 @@ function Process() {
 }
 
 function Testimonials() {
+  const carouselReviews = [...testimonials, ...testimonials];
+
   return (
     <section className="section-pad bg-white" id="reviews">
       <div className="content-shell">
@@ -234,16 +231,18 @@ function Testimonials() {
             <p className="eyebrow">Reviews</p>
             <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">The kind of service people rebook.</h2>
           </div>
-          <p className="text-lg leading-8 text-steel">Real trust is built before, during, and after the detail: clear booking, careful work, clean handoff.</p>
+          <p className="text-lg leading-8 text-steel">Short notes from Chicago drivers who wanted the car handled right.</p>
         </div>
-        <div className="mt-12 grid gap-4 lg:grid-cols-3">
-          {testimonials.map((review) => (
-            <article className="rounded-lg bg-ink p-6 text-white" key={review.name}>
-              <p className="text-lg leading-8 text-ash">"{review.quote}"</p>
-              <p className="mt-10 font-black uppercase">{review.name}</p>
+        <div className="mt-12 overflow-hidden">
+          <div className="testimonial-track flex w-max gap-4">
+            {carouselReviews.map((review, index) => (
+            <article className="w-[290px] shrink-0 rounded-lg bg-ink p-6 text-white md:w-[360px]" key={`${review.name}-${index}`}>
+              <p className="text-lg leading-8 text-ash">&quot;{review.quote}&quot;</p>
+              <p className="mt-8 font-black uppercase">{review.name}</p>
               <p className="text-sm text-red">{review.neighborhood}</p>
             </article>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -255,13 +254,14 @@ function Booking() {
     <section className="section-pad bg-[linear-gradient(135deg,var(--ink),var(--charcoal))] text-white" id="booking">
       <div className="content-shell grid gap-10 lg:grid-cols-[0.78fr_1.22fr]">
         <div>
+          <div className="mb-5 inline-flex rounded-lg border border-red/45 bg-red/15 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-soft">
+            Add another detail - get 10% off
+          </div>
           <p className="eyebrow">Reservations</p>
           <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Choose the detail. We bring the standard.</h2>
-          <p className="mt-6 leading-8 text-ash">
-            Choose the service, vehicle size, date, and time. Pricing updates as you build the reservation, then the backend saves your request and sends confirmation through Resend.
-          </p>
+          <p className="mt-6 leading-8 text-ash">Pick the service, vehicle size, date, and time. We handle the rest.</p>
           <div className="mt-8 grid gap-3">
-            {["Live price estimate", "Resend confirmation", "Telegram admin alert"].map((item) => (
+            {["Quality Work", "Simple Process", "Transparent Pricing", "We Save Your Time"].map((item) => (
               <div className="rounded-lg border border-white/[0.12] bg-white/[0.08] px-4 py-3 text-sm font-black uppercase" key={item}>{item}</div>
             ))}
           </div>
@@ -349,7 +349,7 @@ function ContactFooter() {
           <p className="mt-5 max-w-xl leading-8 text-ash">Premium mobile detailing across Chicago. Built for customers who want a cleaner, sharper, better-protected vehicle without losing the day to a shop visit.</p>
         </div>
         <div className="grid gap-3 text-ash">
-          <a href="tel:+13125550148">(312) 555-0148</a>
+          <a href="tel:3129299580">3129299580</a>
           <a href="mailto:sales@detailxchicago.com">sales@detailxchicago.com</a>
           <a href="https://www.instagram.com/detailxchicago/" target="_blank" rel="noreferrer">@detailxchicago</a>
           <p>Chicago service area</p>

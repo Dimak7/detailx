@@ -99,6 +99,24 @@ body {
   box-shadow: 0 24px 70px rgba(12, 13, 11, 0.18);
 }
 
+.testimonial-track {
+  animation: testimonial-slide 34s linear infinite;
+}
+
+.testimonial-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes testimonial-slide {
+  from {
+    transform: translateX(-50%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
 @media (min-width: 768px) {
   .section-pad {
     padding-block: 7rem;
@@ -109,6 +127,7 @@ body {
   *,
   *::before,
   *::after {
+    animation: none !important;
     scroll-behavior: auto !important;
     transition: none !important;
   }

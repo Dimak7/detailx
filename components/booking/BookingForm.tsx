@@ -189,7 +189,7 @@ export function BookingForm() {
         })}
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-lg border border-ink/10 bg-smoke p-4 md:grid-cols-[1fr_0.86fr]">
+      <div className="mt-4 rounded-lg border border-ink/10 bg-smoke p-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle size</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
@@ -205,11 +205,6 @@ export function BookingForm() {
             ))}
           </div>
         </div>
-        <aside className="rounded-lg bg-white p-4 ring-1 ring-ink/10">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-steel">Offer</p>
-          <p className="mt-2 text-2xl font-black uppercase leading-none">{bookingEstimate.discountApplied ? "10% discount applied" : "Add more to save"}</p>
-          <p className="mt-2 text-sm leading-6 text-steel">Every added detail after the first receives 10% off. Mix services like Exterior Detail plus Interior Detail.</p>
-        </aside>
       </div>
 
       <div className="mt-4 rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
@@ -269,7 +264,7 @@ export function BookingForm() {
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="form-label">Name<input className="field" name="name" minLength={2} required placeholder="Your name" /></label>
-        <label className="form-label">Phone<input className="field" name="phone" required placeholder="(312) 555-0148" /></label>
+        <label className="form-label">Phone<input className="field" name="phone" required placeholder="Your phone number" /></label>
         <label className="form-label">Email<input className="field" name="email" type="email" required placeholder="you@email.com" /></label>
         <label className="form-label">Service location<input className="field" name="address" minLength={5} required placeholder="Chicago address or neighborhood" /></label>
       </div>

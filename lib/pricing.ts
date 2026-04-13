@@ -72,11 +72,12 @@ export type BookingDetailSelection = {
   notes?: string;
 };
 
-export type BookingDetailEstimate = BookingDetailSelection & {
+export type BookingDetailEstimate = Omit<BookingDetailSelection, "notes"> & {
   lineNumber: number;
   estimatedPrice: string;
   basePrice: string;
   discountPercent: number;
+  notes: string;
 };
 
 export type BookingEstimate = {
@@ -150,6 +151,7 @@ export function buildBookingEstimate(details: BookingDetailSelection[]): Booking
 
     return {
       ...detail,
+      notes: detail.notes || "",
       lineNumber: index + 1,
       estimatedPrice: quote.label,
       basePrice: quote.baseLabel,

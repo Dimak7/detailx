@@ -40,8 +40,8 @@ export async function saveBooking(booking: BookingInput) {
     await ensureSchema(db);
     await db.query(
       `INSERT INTO bookings
-        (id, service, booking_date, booking_time, name, phone, email, vehicle_type, address, estimated_price, notes, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        (id, service, booking_date, booking_time, name, phone, email, vehicle_type, address, estimated_price, notes, details_json, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         storedBooking.id,
         storedBooking.service,
@@ -54,6 +54,7 @@ export async function saveBooking(booking: BookingInput) {
         storedBooking.address,
         storedBooking.estimatedPrice,
         storedBooking.notes,
+        JSON.stringify(storedBooking.details || []),
         storedBooking.createdAt,
       ]
     );
@@ -82,11 +83,13 @@ async function ensureSchema(db: Pool) {
       address text NOT NULL,
       estimated_price text,
       notes text,
+      details_json text,
       created_at timestamptz NOT NULL DEFAULT now()
     )
   `);
 
   await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS estimated_price text");
+  await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS details_json text");
 
   hasEnsuredSchema = true;
 }

@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 import { assertFutureDate, bookingSchema } from "./bookingSchema";
 import { saveBooking } from "./bookingStore";
 import { sendBookingNotifications } from "./notifications";
-import { getEstimatedPrice } from "./pricing";
+import { buildBookingEstimate } from "./pricing";
 import { sendTelegramBookingNotification } from "./telegram";
 
 export async function handleBookingRequest(request: Request) {
@@ -11,9 +11,18 @@ export async function handleBookingRequest(request: Request) {
     const body = await request.json();
     const booking = bookingSchema.parse(body);
     assertFutureDate(booking.date);
+    const bookingDetails = booking.details?.length
+      ? booking.details
+      : [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
+    const bookingEstimate = buildBookingEstimate(bookingDetails);
+    const [primaryDetail] = bookingDetails;
     const pricedBooking = {
       ...booking,
-      estimatedPrice: getEstimatedPrice(booking.service, booking.vehicleType),
+      service: primaryDetail.service,
+      vehicleType: primaryDetail.vehicleType,
+      notes: primaryDetail.notes || booking.notes,
+      estimatedPrice: bookingEstimate.estimatedPrice,
+      details: bookingEstimate.details,
     };
 
     const savedBooking = await saveBooking(pricedBooking);

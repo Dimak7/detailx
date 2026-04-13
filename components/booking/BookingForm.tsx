@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useRef, useState } from "react";
-import { getEstimatedPrice, getStartingPriceLabel, pricedServices, vehicleTypes } from "@/lib/pricing";
+import { buildBookingEstimate, getStartingPriceLabel, pricedServices, vehicleTypes } from "@/lib/pricing";
 
 const timeSlots = ["8:00 AM", "10:30 AM", "1:00 PM", "3:30 PM", "6:00 PM"];
 
@@ -13,6 +13,10 @@ type Status = {
 export function BookingForm() {
   const [selectedService, setSelectedService] = useState<(typeof pricedServices)[number]["title"]>(pricedServices[0].title);
   const [selectedVehicle, setSelectedVehicle] = useState<(typeof vehicleTypes)[number]>("Sedan");
+  const [hasSecondDetail, setHasSecondDetail] = useState(false);
+  const [secondService, setSecondService] = useState<(typeof pricedServices)[number]["title"]>(pricedServices[1].title);
+  const [secondVehicle, setSecondVehicle] = useState<(typeof vehicleTypes)[number]>("Sedan");
+  const [secondNotes, setSecondNotes] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [cursor, setCursor] = useState(() => {
@@ -25,7 +29,11 @@ export function BookingForm() {
 
   const calendarDays = useMemo(() => buildCalendar(cursor), [cursor]);
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const estimatedPrice = getEstimatedPrice(selectedService, selectedVehicle);
+  const bookingEstimate = buildBookingEstimate([
+    { service: selectedService, vehicleType: selectedVehicle },
+    ...(hasSecondDetail ? [{ service: secondService, vehicleType: secondVehicle, notes: secondNotes }] : []),
+  ]);
+  const estimatedPrice = bookingEstimate.estimatedPrice;
   const selectedServiceData = pricedServices.find((service) => service.title === selectedService) ?? pricedServices[0];
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
@@ -44,12 +52,17 @@ export function BookingForm() {
     }
 
     const formData = new FormData(form);
-    const payload = Object.fromEntries(formData.entries());
+    const payload: Record<string, unknown> = Object.fromEntries(formData.entries());
+    const primaryNotes = String(payload.notes || "");
     payload.service = selectedService;
     payload.vehicleType = selectedVehicle;
     payload.estimatedPrice = estimatedPrice;
     payload.date = selectedDate;
     payload.time = selectedTime;
+    payload.details = [
+      { service: selectedService, vehicleType: selectedVehicle, notes: primaryNotes },
+      ...(hasSecondDetail ? [{ service: secondService, vehicleType: secondVehicle, notes: secondNotes }] : []),
+    ];
 
     setLoading(true);
     try {
@@ -67,6 +80,10 @@ export function BookingForm() {
       (formRef.current ?? form)?.reset();
       setSelectedService(pricedServices[0].title);
       setSelectedVehicle("Sedan");
+      setHasSecondDetail(false);
+      setSecondService(pricedServices[1].title);
+      setSecondVehicle("Sedan");
+      setSecondNotes("");
       setSelectedDate("");
       setSelectedTime("");
       setStatus({
@@ -141,7 +158,7 @@ export function BookingForm() {
 
       <div className="mt-4 grid gap-3 rounded-lg border border-ink/10 bg-smoke p-4 md:grid-cols-[1fr_0.86fr]">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle size</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">First detail vehicle</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {vehicleTypes.map((vehicle) => (
               <button
@@ -160,10 +177,73 @@ export function BookingForm() {
           <p className="mt-2 text-2xl font-black uppercase leading-none">{selectedServiceData.title}</p>
           <p className="mt-2 text-sm leading-6 text-steel">{selectedServiceData.description}</p>
           <div className="mt-4 rounded-lg bg-red-soft px-4 py-3">
-            <p className="text-xs font-black uppercase text-red">Multi-detail offer</p>
-            <p className="mt-1 text-sm font-bold">Add another detail and get 10% off the additional detail.</p>
+            <p className="text-xs font-black uppercase text-red">First detail</p>
+            <p className="mt-1 text-sm font-bold">{bookingEstimate.details[0]?.estimatedPrice}</p>
           </div>
         </aside>
+      </div>
+
+      {hasSecondDetail ? (
+        <div className="mt-4 rounded-lg border border-red/30 bg-white p-4 ring-1 ring-ink/10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Second detail</p>
+              <h4 className="mt-1 text-2xl font-black uppercase leading-none">10% off additional detail</h4>
+            </div>
+            <button className="rounded-lg border border-ink/10 px-4 py-2 text-sm font-black uppercase text-ink transition hover:border-red/40" type="button" onClick={() => setHasSecondDetail(false)}>
+              Remove
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_0.9fr]">
+            <label className="form-label">
+              Service
+              <select className="field" value={secondService} onChange={(event) => setSecondService(event.target.value as typeof secondService)}>
+                {pricedServices.map((service) => (
+                  <option key={service.title} value={service.title}>{service.title} - {getStartingPriceLabel(service.title)}</option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {vehicleTypes.map((vehicle) => (
+                  <button
+                    className={`rounded-lg px-3 py-3 text-sm font-black uppercase transition ${secondVehicle === vehicle ? "bg-red text-white" : "bg-smoke text-ink ring-1 ring-ink/10 hover:ring-red/40"}`}
+                    key={vehicle}
+                    onClick={() => setSecondVehicle(vehicle)}
+                    type="button"
+                  >
+                    {vehicle}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <label className="form-label mt-4">Second detail notes<textarea className="field min-h-24 resize-y" value={secondNotes} onChange={(event) => setSecondNotes(event.target.value)} maxLength={500} placeholder="Vehicle two notes, access, condition, service goals..." /></label>
+        </div>
+      ) : (
+        <button className="mt-4 w-full rounded-lg border border-red/30 bg-red-soft px-5 py-4 text-center font-black uppercase text-ink transition hover:-translate-y-0.5 hover:border-red" type="button" onClick={() => setHasSecondDetail(true)}>
+          Add Another Detail - get 10% off
+        </button>
+      )}
+
+      <div className="mt-4 rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Booking summary</p>
+        <div className="mt-3 grid gap-2">
+          {bookingEstimate.details.map((detail) => (
+            <div className="flex items-start justify-between gap-4 rounded-lg bg-white px-4 py-3" key={detail.lineNumber}>
+              <div>
+                <p className="font-black uppercase leading-tight">Detail {detail.lineNumber}: {detail.service}</p>
+                <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}{detail.discountPercent ? ` / ${detail.discountPercent}% off` : ""}</p>
+              </div>
+              <p className="text-right font-black text-ink">{detail.estimatedPrice}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-lg bg-ink px-4 py-4 text-white">
+          <span className="text-sm font-black uppercase text-ash">Total estimate</span>
+          <span className="text-2xl font-black">{bookingEstimate.estimatedPrice}</span>
+        </div>
       </div>
 
       <div className="mt-4 rounded-lg bg-ink p-4 text-white ring-1 ring-red/25">

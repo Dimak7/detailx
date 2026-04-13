@@ -12,6 +12,12 @@ export const bookingServices = [
 
 export const vehicleTypes = pricedVehicleTypes;
 
+const bookingDetailSchema = z.object({
+  service: z.enum(bookingServices),
+  vehicleType: z.enum(vehicleTypes),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+
 export const bookingSchema = z.object({
   service: z.enum(bookingServices),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date."),
@@ -23,6 +29,7 @@ export const bookingSchema = z.object({
   address: z.string().trim().min(5, "Service location is required.").max(240),
   estimatedPrice: z.string().trim().max(80).optional().default(""),
   notes: z.string().trim().max(800).optional().default(""),
+  details: z.array(bookingDetailSchema).min(1).max(2).optional(),
 });
 
 export type BookingInput = z.infer<typeof bookingSchema>;

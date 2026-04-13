@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import type { BookingInput } from "./bookingSchema";
+import { buildBookingEstimate } from "./pricing";
 
 type BookingEmail = BookingInput & { id: string };
 
@@ -97,31 +98,32 @@ async function sendEmail(message: {
 function buildCustomerEmailHtml(booking: BookingEmail) {
   const businessEmail = getBusinessEmail();
   const calendarUrl = buildGoogleCalendarUrl(booking);
+  const detailItems = getEmailDetailItems(booking);
+  const notes = detailItems.flatMap((detail) => detail.notes ? [`Detail ${detail.lineNumber}: ${detail.notes}`] : []);
 
   return `
-    <div style="margin:0;background:#eeeeea;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.6">
-      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e2e2dc;border-radius:8px;overflow:hidden;box-shadow:0 18px 60px rgba(5,5,6,0.12)">
-        <div style="background:#050506;color:#ffffff;padding:34px 28px 30px">
-          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase">DETAILX Chicago</p>
-          <h1 style="margin:12px 0 0;font-size:34px;line-height:1;text-transform:uppercase">Thank you for booking with DETAILX Chicago.</h1>
-          <p style="margin:18px 0 0;color:#c7c9c7;font-size:16px">We appreciate your trust. Your appointment request has been received and we will follow up if anything needs to be confirmed.</p>
+    <div style="margin:0;background:#eeeeea;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.5">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e2dc;border-radius:8px;overflow:hidden">
+        <div style="background:#050506;color:#ffffff;padding:26px 24px">
+          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase">DETAILX Chicago</p>
+          <h1 style="margin:10px 0 0;font-size:30px;line-height:1;text-transform:uppercase">Booking Confirmed</h1>
+          <p style="margin:12px 0 0;color:#c7c9c7;font-size:15px">Thanks for booking with DETAILX Chicago.</p>
         </div>
-        <div style="padding:28px">
-          <div style="border:1px solid #e6e6df;background:#f7f7f2;border-radius:8px;padding:20px">
-            <p style="margin:0;color:#73777c;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase">Estimated total</p>
-            <p style="margin:8px 0 0;font-size:32px;font-weight:900;line-height:1;color:#050506">${escapeHtml(booking.estimatedPrice || "Estimate pending")}</p>
-            <p style="margin:8px 0 0;color:#73777c;font-size:14px">Final scope can vary by condition, access, and selected add-ons.</p>
+        <div style="padding:24px">
+          <div style="border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+            ${detailItems.map(buildEmailDetailRow).join("")}
+            ${buildSummaryLine("Date", booking.date)}
+            ${buildSummaryLine("Time", booking.time)}
+            ${buildSummaryLine("Location", booking.address)}
+            ${notes.length ? buildSummaryLine("Notes", notes.join(" | ")) : ""}
+            ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
           </div>
-          ${buildDetailCards(booking)}
           <div style="margin-top:24px;text-align:center">
-            <a href="${escapeHtml(calendarUrl)}" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:14px;font-weight:900;letter-spacing:0.04em;text-decoration:none;text-transform:uppercase;padding:15px 22px">Add to Google Calendar</a>
+            <a href="${escapeHtml(calendarUrl)}" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:13px;font-weight:900;letter-spacing:0.04em;text-decoration:none;text-transform:uppercase;padding:14px 20px">Add to Google Calendar</a>
           </div>
-          <p style="margin:24px 0 0;color:#383b40">We will arrive at your location and take care of everything with a premium, careful process. If anything needs to change, reply to this email or contact us at <a style="color:#c1121f;font-weight:800" href="mailto:${escapeHtml(businessEmail)}">${escapeHtml(businessEmail)}</a>.</p>
-          ${buildEmailBanner()}
         </div>
-        <div style="border-top:1px solid #e4e4df;background:#050506;padding:22px 28px;color:#c7c9c7;font-size:13px">
+        <div style="border-top:1px solid #e4e4df;background:#050506;padding:20px 24px;color:#c7c9c7;font-size:13px">
           <strong style="color:#ffffff">Thank you for trusting DETAILX Chicago.</strong><br />
-          Premium Mobile Detailing in Chicago<br />
           <a style="color:#ffffff" href="mailto:${escapeHtml(businessEmail)}">${escapeHtml(businessEmail)}</a> / <a style="color:#ffffff" href="https://www.instagram.com/detailxchicago/">@detailxchicago</a>
         </div>
       </div>
@@ -130,17 +132,27 @@ function buildCustomerEmailHtml(booking: BookingEmail) {
 }
 
 function buildBusinessEmailHtml(booking: BookingEmail) {
+  const detailItems = getEmailDetailItems(booking);
+  const notes = detailItems.flatMap((detail) => detail.notes ? [`Detail ${detail.lineNumber}: ${detail.notes}`] : []);
+
   return `
     <div style="margin:0;background:#f5f5f2;padding:32px 16px;font-family:Arial,sans-serif;color:#050506;line-height:1.6">
       <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
         <div style="background:#050506;color:#ffffff;padding:28px">
           <p style="margin:0;color:#c1121f;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase">New booking</p>
-          <h1 style="margin:10px 0 0;font-size:28px;line-height:1.05;text-transform:uppercase">${escapeHtml(booking.service)} / ${escapeHtml(booking.date)} at ${escapeHtml(booking.time)}</h1>
+          <h1 style="margin:10px 0 0;font-size:28px;line-height:1.05;text-transform:uppercase">${detailItems.length} detail${detailItems.length > 1 ? "s" : ""} / ${escapeHtml(booking.date)} at ${escapeHtml(booking.time)}</h1>
           <p style="margin:12px 0 0;color:#c7c9c7;font-size:18px;font-weight:800">${escapeHtml(booking.estimatedPrice || "Estimate pending")}</p>
         </div>
         <div style="padding:28px">
           <p style="margin:0 0 18px"><strong>Contact:</strong> ${escapeHtml(booking.name)} / ${escapeHtml(booking.phone)} / <a style="color:#c1121f;font-weight:700" href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a></p>
-          ${buildDetailTable(booking)}
+          <div style="border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+            ${detailItems.map(buildEmailDetailRow).join("")}
+            ${buildSummaryLine("Date", booking.date)}
+            ${buildSummaryLine("Time", booking.time)}
+            ${buildSummaryLine("Location", booking.address)}
+            ${notes.length ? buildSummaryLine("Notes", notes.join(" | ")) : ""}
+            ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
+          </div>
         </div>
         <div style="border-top:1px solid #e4e4df;padding:18px 28px;color:#73777c;font-size:13px">
           DETAILX Chicago<br />Premium Mobile Detailing in Chicago<br />Booking ID: ${booking.id}
@@ -150,86 +162,13 @@ function buildBusinessEmailHtml(booking: BookingEmail) {
   `;
 }
 
-function buildDetailTable(booking: BookingEmail) {
-  const details = [
-    ["Confirmation", booking.id],
-    ["Name", booking.name],
-    ["Service", booking.service],
-    ["Estimated price", booking.estimatedPrice || "Estimate pending"],
-    ["Date", booking.date],
-    ["Time", booking.time],
-    ["Vehicle", booking.vehicleType],
-    ["Location", booking.address],
-    ["Phone", booking.phone],
-    ["Email", booking.email],
-    ["Notes", booking.notes || "No extra notes provided."],
-  ];
-
-  return `
-    <table style="width:100%;border-collapse:collapse;border:1px solid #e4e4df">
-      <tbody>
-        ${details
-          .map(
-            ([label, value]) => `
-              <tr>
-                <th style="width:34%;padding:12px;text-align:left;background:#f5f5f2;border-bottom:1px solid #e4e4df;font-size:13px;text-transform:uppercase">${escapeHtml(label)}</th>
-                <td style="padding:12px;border-bottom:1px solid #e4e4df">${escapeHtml(value)}</td>
-              </tr>
-            `
-          )
-          .join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function buildDetailCards(booking: BookingEmail) {
-  const details = [
-    ["Customer", booking.name],
-    ["Service", booking.service],
-    ["Vehicle", booking.vehicleType],
-    ["Date", booking.date],
-    ["Time", booking.time],
-    ["Location", booking.address],
-    ["Notes", booking.notes || "No extra notes provided."],
-  ];
-
-  return `
-    <div style="margin-top:22px;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
-      ${details
-        .map(
-          ([label, value]) => `
-            <div style="display:block;border-bottom:1px solid #e4e4df;padding:14px 16px">
-              <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">${escapeHtml(label)}</p>
-              <p style="margin:5px 0 0;color:#050506;font-size:15px;font-weight:700">${escapeHtml(value)}</p>
-            </div>
-          `
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function buildEmailBanner() {
-  return `
-    <div style="margin-top:26px;overflow:hidden;border-radius:8px;border:1px solid #e4e4df;background:#050506">
-      <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=82" alt="DETAILX Chicago premium detailing" style="display:block;width:100%;max-width:100%;height:auto" />
-      <div style="padding:16px 18px;color:#ffffff">
-        <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">DETAILX Chicago</p>
-        <p style="margin:6px 0 0;color:#c7c9c7;font-size:14px">Premium mobile detailing in Chicago.</p>
-      </div>
-    </div>
-  `;
-}
-
 function buildGoogleCalendarUrl(booking: BookingEmail) {
   const start = buildGoogleDateTime(booking.date, booking.time, 0);
   const end = buildGoogleDateTime(booking.date, booking.time, 2);
+  const detailItems = getEmailDetailItems(booking);
   const details = [
-    `Service: ${booking.service}`,
-    `Vehicle: ${booking.vehicleType}`,
+    ...detailItems.map((detail) => `Detail ${detail.lineNumber}: ${detail.service} / ${detail.vehicleType} / ${detail.estimatedPrice}`),
     `Estimated price: ${booking.estimatedPrice || "Estimate pending"}`,
-    `Notes: ${booking.notes || "No extra notes provided."}`,
     `Booking ID: ${booking.id}`,
   ].join("\n");
   const params = new URLSearchParams({
@@ -242,6 +181,35 @@ function buildGoogleCalendarUrl(booking: BookingEmail) {
   });
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function getEmailDetailItems(booking: BookingEmail) {
+  const details = booking.details?.length
+    ? booking.details
+    : [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
+
+  return buildBookingEstimate(details).details;
+}
+
+function buildEmailDetailRow(detail: ReturnType<typeof getEmailDetailItems>[number]) {
+  const discount = detail.discountPercent ? ` / ${detail.discountPercent}% off` : "";
+
+  return `
+    <div style="border-bottom:1px solid #e4e4df;padding:14px 16px">
+      <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">Detail ${detail.lineNumber}${discount}</p>
+      <p style="margin:5px 0 0;color:#050506;font-size:16px;font-weight:800">${escapeHtml(detail.service)} / ${escapeHtml(detail.vehicleType)}</p>
+      <p style="margin:4px 0 0;color:#c1121f;font-size:14px;font-weight:900">${escapeHtml(detail.estimatedPrice)}</p>
+    </div>
+  `;
+}
+
+function buildSummaryLine(label: string, value: string, strong = false) {
+  return `
+    <div style="border-bottom:1px solid #e4e4df;padding:14px 16px;background:${strong ? "#f7f7f2" : "#ffffff"}">
+      <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">${escapeHtml(label)}</p>
+      <p style="margin:5px 0 0;color:#050506;font-size:${strong ? "20px" : "15px"};font-weight:${strong ? "900" : "700"}">${escapeHtml(value)}</p>
+    </div>
+  `;
 }
 
 function buildGoogleDateTime(dateValue: string, timeValue: string, addHours: number) {

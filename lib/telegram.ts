@@ -1,4 +1,5 @@
 import type { BookingInput } from "./bookingSchema";
+import { buildBookingEstimate } from "./pricing";
 
 type TelegramBooking = BookingInput & { id: string };
 
@@ -45,19 +46,26 @@ export async function sendTelegramBookingNotification(booking: TelegramBooking):
 }
 
 function buildTelegramBookingMessage(booking: TelegramBooking) {
+  const details = booking.details?.length
+    ? booking.details
+    : [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
+  const estimate = buildBookingEstimate(details);
+
   return [
     "<b>New DETAILX Booking</b>",
     "",
     `<b>Name:</b> ${escapeTelegramHtml(booking.name)}`,
     `<b>Phone:</b> ${escapeTelegramHtml(booking.phone)}`,
     `<b>Email:</b> ${escapeTelegramHtml(booking.email)}`,
-    `<b>Service:</b> ${escapeTelegramHtml(booking.service)}`,
-    `<b>Vehicle:</b> ${escapeTelegramHtml(booking.vehicleType)}`,
-    `<b>Price:</b> ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
+    ...estimate.details.map(
+      (detail) =>
+        `<b>Detail ${detail.lineNumber}:</b> ${escapeTelegramHtml(detail.service)} / ${escapeTelegramHtml(detail.vehicleType)} / ${escapeTelegramHtml(detail.estimatedPrice)}${detail.discountPercent ? " / 10% off" : ""}`
+    ),
+    `<b>Total:</b> ${escapeTelegramHtml(booking.estimatedPrice || estimate.estimatedPrice)}`,
     `<b>Date:</b> ${escapeTelegramHtml(booking.date)}`,
     `<b>Time:</b> ${escapeTelegramHtml(booking.time)}`,
     `<b>Location:</b> ${escapeTelegramHtml(booking.address)}`,
-    `<b>Notes:</b> ${escapeTelegramHtml(booking.notes || "N/A")}`,
+    `<b>Notes:</b> ${escapeTelegramHtml(estimate.details.map((detail) => detail.notes).filter(Boolean).join(" | ") || "N/A")}`,
   ].join("\n");
 }
 

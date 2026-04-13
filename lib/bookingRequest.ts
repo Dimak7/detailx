@@ -73,6 +73,10 @@ export async function handleBookingRequest(request: Request) {
       return NextResponse.json({ ok: false, status: "booking_failed", error: error.message }, { status: 400 });
     }
 
+    if (error instanceof Error && error.message.includes("time is no longer available")) {
+      return NextResponse.json({ ok: false, status: "slot_unavailable", error: error.message }, { status: 409 });
+    }
+
     console.error("Booking request failed", error);
     return NextResponse.json(
       {

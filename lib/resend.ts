@@ -102,15 +102,18 @@ function buildCustomerEmailHtml(booking: BookingEmail) {
   const notes = detailItems.flatMap((detail) => detail.notes ? [`Detail ${detail.lineNumber}: ${detail.notes}`] : []);
 
   return `
-    <div style="margin:0;background:#eeeeea;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.5">
-      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e2dc;border-radius:8px;overflow:hidden">
-        <div style="background:#050506;color:#ffffff;padding:26px 24px">
-          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase">DETAILX Chicago</p>
-          <h1 style="margin:10px 0 0;font-size:30px;line-height:1;text-transform:uppercase">Booking Confirmed</h1>
-          <p style="margin:12px 0 0;color:#c7c9c7;font-size:15px">Thanks for booking with DETAILX Chicago.</p>
+    <div style="margin:0;background:#f1f1ee;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.5">
+      <div style="max-width:680px;margin:0 auto">
+        <div style="background:#050506;border-radius:8px 8px 0 0;padding:30px 26px;color:#ffffff">
+          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.16em;text-transform:uppercase">DETAILX Chicago</p>
+          <h1 style="margin:12px 0 0;font-size:34px;line-height:0.96;text-transform:uppercase">Booking Confirmed</h1>
+          <p style="margin:14px 0 0;color:#c7c9c7;font-size:16px">Thanks for booking with DETAILX Chicago. Your appointment request has been received.</p>
         </div>
-        <div style="padding:24px">
-          <div style="border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+        <div style="background:#ffffff;border:1px solid #e2e2dc;border-top:0;padding:24px">
+          <div style="border:1px solid #e4e4df;border-radius:8px;overflow:hidden;background:#ffffff">
+            <div style="background:#f7f7f3;padding:14px 16px;border-bottom:1px solid #e4e4df">
+              <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase">Booking summary</p>
+            </div>
             ${detailItems.map(buildEmailDetailRow).join("")}
             ${buildSummaryLine("Date", booking.date)}
             ${buildSummaryLine("Time", booking.time)}
@@ -119,12 +122,13 @@ function buildCustomerEmailHtml(booking: BookingEmail) {
             ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
           </div>
           <div style="margin-top:24px;text-align:center">
-            <a href="${escapeHtml(calendarUrl)}" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:13px;font-weight:900;letter-spacing:0.04em;text-decoration:none;text-transform:uppercase;padding:14px 20px">Add to Google Calendar</a>
+            <a href="${escapeHtml(calendarUrl)}" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:13px;font-weight:900;letter-spacing:0.06em;text-decoration:none;text-transform:uppercase;padding:15px 22px">Add to Google Calendar</a>
           </div>
         </div>
-        <div style="border-top:1px solid #e4e4df;background:#050506;padding:20px 24px;color:#c7c9c7;font-size:13px">
-          <strong style="color:#ffffff">Thank you for trusting DETAILX Chicago.</strong><br />
-          <a style="color:#ffffff" href="mailto:${escapeHtml(businessEmail)}">${escapeHtml(businessEmail)}</a> / <a style="color:#ffffff" href="https://www.instagram.com/detailxchicago/">@detailxchicago</a>
+        <div style="background:#050506;border-radius:0 0 8px 8px;padding:22px 26px;color:#c7c9c7;font-size:13px">
+          <p style="margin:0 0 8px;color:#ffffff;font-size:16px;font-weight:900;text-transform:uppercase">Thank you for trusting DETAILX Chicago.</p>
+          <p style="margin:0">Premium Mobile Detailing in Chicago</p>
+          <p style="margin:10px 0 0"><a style="color:#ffffff" href="mailto:${escapeHtml(businessEmail)}">${escapeHtml(businessEmail)}</a> / <a style="color:#ffffff" href="https://www.instagram.com/detailxchicago/">@detailxchicago</a></p>
         </div>
       </div>
     </div>
@@ -136,15 +140,19 @@ function buildBusinessEmailHtml(booking: BookingEmail) {
   const notes = detailItems.flatMap((detail) => detail.notes ? [`Detail ${detail.lineNumber}: ${detail.notes}`] : []);
 
   return `
-    <div style="margin:0;background:#f5f5f2;padding:32px 16px;font-family:Arial,sans-serif;color:#050506;line-height:1.6">
+    <div style="margin:0;background:#f1f1ee;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.5">
       <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
-        <div style="background:#050506;color:#ffffff;padding:28px">
-          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase">New booking</p>
-          <h1 style="margin:10px 0 0;font-size:28px;line-height:1.05;text-transform:uppercase">${detailItems.length} detail${detailItems.length > 1 ? "s" : ""} / ${escapeHtml(booking.date)} at ${escapeHtml(booking.time)}</h1>
-          <p style="margin:12px 0 0;color:#c7c9c7;font-size:18px;font-weight:800">${escapeHtml(booking.estimatedPrice || "Estimate pending")}</p>
+        <div style="background:#050506;color:#ffffff;padding:28px 26px">
+          <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.16em;text-transform:uppercase">New DETAILX booking</p>
+          <h1 style="margin:12px 0 0;font-size:30px;line-height:1;text-transform:uppercase">${detailItems.length} detail${detailItems.length > 1 ? "s" : ""}</h1>
+          <p style="margin:12px 0 0;color:#c7c9c7;font-size:16px;font-weight:800">${escapeHtml(booking.date)} at ${escapeHtml(booking.time)} / ${escapeHtml(booking.estimatedPrice || "Estimate pending")}</p>
         </div>
-        <div style="padding:28px">
-          <p style="margin:0 0 18px"><strong>Contact:</strong> ${escapeHtml(booking.name)} / ${escapeHtml(booking.phone)} / <a style="color:#c1121f;font-weight:700" href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a></p>
+        <div style="padding:24px">
+          <div style="margin-bottom:18px;border:1px solid #e4e4df;border-radius:8px;background:#f7f7f3;padding:16px">
+            <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase">Customer</p>
+            <p style="margin:6px 0 0;font-size:18px;font-weight:900">${escapeHtml(booking.name)}</p>
+            <p style="margin:4px 0 0;color:#73777c;font-size:14px;font-weight:700">${escapeHtml(booking.phone)} / <a style="color:#c1121f;font-weight:800" href="mailto:${escapeHtml(booking.email)}">${escapeHtml(booking.email)}</a></p>
+          </div>
           <div style="border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
             ${detailItems.map(buildEmailDetailRow).join("")}
             ${buildSummaryLine("Date", booking.date)}
@@ -154,7 +162,7 @@ function buildBusinessEmailHtml(booking: BookingEmail) {
             ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
           </div>
         </div>
-        <div style="border-top:1px solid #e4e4df;padding:18px 28px;color:#73777c;font-size:13px">
+        <div style="border-top:1px solid #e4e4df;background:#050506;padding:18px 26px;color:#c7c9c7;font-size:13px">
           DETAILX Chicago<br />Premium Mobile Detailing in Chicago<br />Booking ID: ${booking.id}
         </div>
       </div>
@@ -195,9 +203,9 @@ function buildEmailDetailRow(detail: ReturnType<typeof getEmailDetailItems>[numb
   const discount = detail.discountPercent ? ` / ${detail.discountPercent}% off` : "";
 
   return `
-    <div style="border-bottom:1px solid #e4e4df;padding:14px 16px">
+    <div style="border-bottom:1px solid #e4e4df;padding:16px">
       <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">Detail ${detail.lineNumber}${discount}</p>
-      <p style="margin:5px 0 0;color:#050506;font-size:16px;font-weight:800">${escapeHtml(detail.service)} / ${escapeHtml(detail.vehicleType)}</p>
+      <p style="margin:6px 0 0;color:#050506;font-size:17px;font-weight:900">${escapeHtml(detail.service)} / ${escapeHtml(detail.vehicleType)}</p>
       <p style="margin:4px 0 0;color:#c1121f;font-size:14px;font-weight:900">${escapeHtml(detail.estimatedPrice)}</p>
     </div>
   `;
@@ -205,9 +213,9 @@ function buildEmailDetailRow(detail: ReturnType<typeof getEmailDetailItems>[numb
 
 function buildSummaryLine(label: string, value: string, strong = false) {
   return `
-    <div style="border-bottom:1px solid #e4e4df;padding:14px 16px;background:${strong ? "#f7f7f2" : "#ffffff"}">
+    <div style="border-bottom:1px solid #e4e4df;padding:16px;background:${strong ? "#050506" : "#ffffff"}">
       <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">${escapeHtml(label)}</p>
-      <p style="margin:5px 0 0;color:#050506;font-size:${strong ? "20px" : "15px"};font-weight:${strong ? "900" : "700"}">${escapeHtml(value)}</p>
+      <p style="margin:6px 0 0;color:${strong ? "#ffffff" : "#050506"};font-size:${strong ? "22px" : "15px"};font-weight:${strong ? "900" : "700"}">${escapeHtml(value)}</p>
     </div>
   `;
 }

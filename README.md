@@ -19,6 +19,9 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 ```text
 .
 |-- app/
+|   |-- admin/schedule/page.tsx
+|   |-- api/admin/schedule/route.ts
+|   |-- api/availability/route.ts
 |   |-- api/bookings/route.ts
 |   |-- globals.css
 |   |-- layout.tsx
@@ -29,11 +32,13 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 |-- data/
 |   `-- .gitkeep
 |-- lib/
+|   |-- adminAuth.ts
 |   |-- bookingSchema.ts
 |   |-- bookingStore.ts
 |   |-- notifications.ts
 |   |-- pricing.ts
 |   |-- resend.ts
+|   |-- schedule.ts
 |   |-- siteData.ts
 |   `-- telegram.ts
 |-- .env.example
@@ -85,6 +90,34 @@ Validated fields:
 
 Pricing logic lives in `lib/pricing.ts`. The booking API recomputes the estimate server-side before saving the booking.
 
+## Scheduling and availability
+
+Availability is built around fixed booking windows from `lib/schedule.ts`:
+
+- 8:00 AM
+- 10:30 AM
+- 1:00 PM
+- 3:30 PM
+- 6:00 PM
+
+The customer form loads open times from `GET /api/availability?date=YYYY-MM-DD`. Booked or manually blocked slots are disabled in the UI.
+
+Double-booking is prevented on the server in `lib/bookingStore.ts`. In PostgreSQL, booking save runs inside a transaction, takes a slot-specific advisory lock, checks active bookings and blocked slots for the selected date/time, and only then inserts the booking. If two customers race for the same slot, the second request receives a clear unavailable-slot response. Local JSON fallback also checks availability before saving, but PostgreSQL is recommended for production.
+
+Admin schedule management lives at:
+
+```text
+/admin/schedule
+```
+
+Set this environment variable before using it:
+
+```bash
+ADMIN_SCHEDULE_KEY=
+```
+
+Use a long private value. The admin page sends it as an `x-admin-key` header to the protected `POST/GET/PATCH/DELETE /api/admin/schedule` route. Admin tools can view bookings by date, block a slot, remove a block, and update booking status to `booked`, `confirmed`, or `canceled`.
+
 If `DATABASE_URL` is set, bookings are stored in PostgreSQL. The app creates this table automatically if it does not exist:
 
 ```sql
@@ -100,6 +133,17 @@ CREATE TABLE IF NOT EXISTS bookings (
   address text NOT NULL,
   estimated_price text,
   notes text,
+  details_json text,
+  status text NOT NULL DEFAULT 'booked',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS schedule_blocks (
+  id uuid PRIMARY KEY,
+  block_date date NOT NULL,
+  block_time text NOT NULL,
+  reason text,
+  status text NOT NULL DEFAULT 'blocked',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ```

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildBookingEstimate,
   getStartingPriceLabel,
@@ -11,8 +11,8 @@ import {
   type BookingService,
   type VehicleType,
 } from "@/lib/pricing";
+import { timeSlots, type SlotAvailability } from "@/lib/schedule";
 
-const timeSlots = ["8:00 AM", "10:30 AM", "1:00 PM", "3:30 PM", "6:00 PM"];
 const maxDetails = 6;
 
 type Status = {
@@ -41,6 +41,9 @@ export function BookingForm() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>("Sedan");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [availability, setAvailability] = useState<SlotAvailability[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
   const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -57,6 +60,44 @@ export function BookingForm() {
   const estimatedPrice = bookingEstimate.estimatedPrice;
   const totalDetails = selectedDetails.length;
   const primaryDetail = selectedDetails[0] ?? { service: pricedServices[0].title, vehicleType: selectedVehicle };
+  const availableSlotByTime = new Map(availability.map((slot) => [slot.time, slot]));
+
+  useEffect(() => {
+    if (!selectedDate) {
+      setAvailability([]);
+      setAvailabilityError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setAvailabilityLoading(true);
+    setAvailabilityError("");
+
+    fetch(`/api/availability?date=${encodeURIComponent(selectedDate)}`, { signal: controller.signal })
+      .then(async (response) => {
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Could not load availability.");
+        }
+
+        setAvailability(result.slots || []);
+        if (selectedTime && !result.slots?.some((slot: SlotAvailability) => slot.time === selectedTime && slot.available)) {
+          setSelectedTime("");
+        }
+      })
+      .catch((error) => {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        setAvailability([]);
+        setAvailabilityError(error instanceof Error ? error.message : "Could not load availability.");
+      })
+      .finally(() => setAvailabilityLoading(false));
+
+    return () => controller.abort();
+  }, [selectedDate]);
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,6 +116,11 @@ export function BookingForm() {
 
     if (!selectedDate || !selectedTime) {
       setStatus({ type: "error", message: "Choose a date and time before requesting your detail." });
+      return;
+    }
+
+    if (!availableSlotByTime.get(selectedTime as SlotAvailability["time"])?.available) {
+      setStatus({ type: "error", message: "That time is not available anymore. Please choose another slot." });
       return;
     }
 
@@ -113,6 +159,8 @@ export function BookingForm() {
       (formRef.current ?? form)?.reset();
       setServiceCounts(initialServiceCounts);
       setSelectedVehicle("Sedan");
+      setAvailability([]);
+      setAvailabilityError("");
       setSelectedDate("");
       setSelectedTime("");
       setStatus({ type: "idle", message: "" });
@@ -272,12 +320,22 @@ export function BookingForm() {
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-5">
-        {timeSlots.map((time) => (
-          <button className={`rounded-lg px-3 py-3 text-sm font-black transition ${selectedTime === time ? "bg-red text-white" : "bg-smoke text-ink hover:bg-red-soft"}`} key={time} onClick={() => setSelectedTime(time)} type="button">
+        {timeSlots.map((time) => {
+          const slot = availableSlotByTime.get(time);
+          const disabled = !selectedDate || availabilityLoading || Boolean(availabilityError) || !slot || !slot.available;
+          return (
+          <button className={`rounded-lg px-3 py-3 text-sm font-black transition ${selectedTime === time ? "bg-red text-white" : disabled ? "bg-ash/40 text-steel opacity-60" : "bg-smoke text-ink hover:bg-red-soft"}`} disabled={disabled} key={time} onClick={() => setSelectedTime(time)} type="button">
             {time}
+            {slot && !slot.available ? <span className="mt-1 block text-[10px] uppercase">{slot.reason}</span> : null}
           </button>
-        ))}
+          );
+        })}
       </div>
+      {selectedDate && !availabilityLoading && !availabilityError && availability.length > 0 && availability.every((slot) => !slot.available) ? (
+        <p className="mt-3 rounded-lg bg-red-soft px-4 py-3 text-sm font-bold text-ink">No slots are open for this date. Please choose another day.</p>
+      ) : null}
+      {availabilityLoading ? <p className="mt-3 text-sm font-bold text-steel">Checking available times...</p> : null}
+      {availabilityError ? <p className="mt-3 rounded-lg bg-red-100 px-4 py-3 text-sm font-bold text-red-900">{availabilityError}</p> : null}
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="form-label">Name<input className="field" name="name" minLength={2} required placeholder="Your name" /></label>

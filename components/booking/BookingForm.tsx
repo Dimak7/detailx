@@ -7,6 +7,7 @@ import {
   pricedServices,
   vehicleTypes,
   type BookingDetailSelection,
+  type BookingDetailEstimate,
   type BookingService,
   type VehicleType,
 } from "@/lib/pricing";
@@ -21,6 +22,15 @@ type Status = {
 
 type ServiceCounts = Record<BookingService, number>;
 
+type BookingConfirmation = {
+  details: BookingDetailEstimate[];
+  date: string;
+  time: string;
+  location: string;
+  estimatedTotal: string;
+  emailSent: boolean;
+};
+
 const initialServiceCounts = pricedServices.reduce((counts, service, index) => {
   counts[service.title] = index === 0 ? 1 : 0;
   return counts;
@@ -31,6 +41,7 @@ export function BookingForm() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>("Sedan");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -91,15 +102,20 @@ export function BookingForm() {
         throw new Error(result.error || "Booking request failed.");
       }
 
+      setConfirmation({
+        details: bookingEstimate.details,
+        date: selectedDate,
+        time: selectedTime,
+        location: String(payload.address || ""),
+        estimatedTotal: estimatedPrice,
+        emailSent: result.status === "booking_saved_email_sent" || Boolean(result.emailSent),
+      });
       (formRef.current ?? form)?.reset();
       setServiceCounts(initialServiceCounts);
       setSelectedVehicle("Sedan");
       setSelectedDate("");
       setSelectedTime("");
-      setStatus({
-        type: "success",
-        message: getSuccessMessage(result),
-      });
+      setStatus({ type: "idle", message: "" });
     } catch (error) {
       setStatus({
         type: "error",
@@ -138,7 +154,8 @@ export function BookingForm() {
   }
 
   return (
-    <form ref={formRef} className="rounded-lg bg-white p-3 text-ink shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-5" onSubmit={submitBooking}>
+    <>
+      <form ref={formRef} className="rounded-lg bg-white p-3 text-ink shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-5" onSubmit={submitBooking}>
       <input name="service" type="hidden" value={primaryDetail.service} />
       <input name="vehicleType" type="hidden" value={selectedVehicle} />
       <input name="estimatedPrice" type="hidden" value={estimatedPrice} />
@@ -308,7 +325,80 @@ export function BookingForm() {
           font-weight: 900;
         }
       `}</style>
-    </form>
+      </form>
+      {confirmation ? (
+        <BookingConfirmationOverlay
+          confirmation={confirmation}
+          onBookAnother={() => setConfirmation(null)}
+          onBackHome={() => {
+            setConfirmation(null);
+            window.location.hash = "top";
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function BookingConfirmationOverlay({
+  confirmation,
+  onBackHome,
+  onBookAnother,
+}: {
+  confirmation: BookingConfirmation;
+  onBackHome: () => void;
+  onBookAnother: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[90] overflow-y-auto bg-ink/95 px-4 py-6 text-white backdrop-blur-xl md:py-10" role="dialog" aria-modal="true" aria-labelledby="booking-confirmed-title">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-4xl place-items-center">
+        <div className="w-full rounded-lg border border-white/[0.14] bg-[linear-gradient(145deg,rgba(27,29,34,0.98),rgba(5,5,6,0.98))] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] md:p-8">
+          <div className="grid gap-6 md:grid-cols-[0.8fr_1.2fr] md:items-start">
+            <div>
+              <p className="inline-flex rounded-lg bg-red px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">Booking Confirmed</p>
+              <h2 id="booking-confirmed-title" className="mt-5 text-4xl font-black uppercase leading-none md:text-6xl">Thank you for booking with DETAILX Chicago.</h2>
+              <p className="mt-5 text-base leading-7 text-ash">
+                {confirmation.emailSent ? "Check your email for confirmation details." : "Your booking was received. We'll contact you shortly."}
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row md:flex-col">
+                <button className="rounded-lg bg-red px-5 py-4 text-center font-black uppercase text-white transition hover:bg-red-dark" type="button" onClick={onBookAnother}>
+                  Book Another Detail
+                </button>
+                <button className="rounded-lg border border-white/20 px-5 py-4 text-center font-black uppercase text-white transition hover:bg-white/10" type="button" onClick={onBackHome}>
+                  Back to Home
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-4 text-ink md:p-5">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Reservation summary</p>
+              <div className="mt-4 grid gap-3">
+                {confirmation.details.map((detail) => (
+                  <div className="rounded-lg bg-smoke px-4 py-3" key={detail.lineNumber}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-black uppercase leading-tight">Detail {detail.lineNumber}: {detail.service}</p>
+                        <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}{detail.discountPercent ? ` / ${detail.discountPercent}% off` : ""}</p>
+                      </div>
+                      <p className="text-right font-black">{detail.estimatedPrice}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-2 rounded-lg border border-ink/10 p-4 text-sm font-bold text-steel">
+                <div className="flex justify-between gap-4"><span>Date</span><span className="text-right text-ink">{confirmation.date}</span></div>
+                <div className="flex justify-between gap-4"><span>Time</span><span className="text-right text-ink">{confirmation.time}</span></div>
+                <div className="flex justify-between gap-4"><span>Location</span><span className="min-w-0 break-words text-right text-ink">{confirmation.location}</span></div>
+              </div>
+              <div className="mt-4 flex items-center justify-between rounded-lg bg-ink px-4 py-4 text-white">
+                <span className="text-sm font-black uppercase text-ash">Estimated total</span>
+                <span className="text-2xl font-black">{confirmation.estimatedTotal}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -323,14 +413,6 @@ function buildDetailsFromCounts(counts: ServiceCounts, vehicleType: VehicleType)
 
 function getDetailCount(counts: ServiceCounts) {
   return Object.values(counts).reduce((total, count) => total + count, 0);
-}
-
-function getSuccessMessage(result: { status?: string; emailSent?: boolean; warning?: string }) {
-  if (result.status === "booking_saved_email_sent" || result.emailSent) {
-    return "Booking confirmed. Check your email for details.";
-  }
-
-  return "Booking received. We'll contact you shortly.";
 }
 
 function buildCalendar(cursor: Date) {

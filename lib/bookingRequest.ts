@@ -5,7 +5,6 @@ import { assertFutureDate, bookingSchema } from "./bookingSchema";
 import { saveBooking } from "./bookingStore";
 import { sendBookingNotifications } from "./notifications";
 import { getEstimatedPrice } from "./pricing";
-import { sendTelegramBookingNotification } from "./telegram";
 
 export async function handleBookingRequest(request: Request) {
   try {
@@ -20,7 +19,10 @@ export async function handleBookingRequest(request: Request) {
 
     const savedBooking = await saveBooking(pricedBooking);
     const notifications = await sendBookingNotifications(savedBooking);
-    const telegram = await sendTelegramBookingNotification(savedBooking);
+    const telegram = "skipped";
+    console.info("Telegram notification temporarily disabled for booking isolation test.", {
+      bookingId: savedBooking.id,
+    });
     const emailWarning =
       notifications.email === "skipped"
         ? "Booking saved. Email confirmations were skipped because Resend is not configured."

@@ -1,12 +1,15 @@
+import "server-only";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { assertFutureDate, bookingSchema } from "./bookingSchema";
 import { saveBooking } from "./bookingStore";
 import { sendBookingNotifications } from "./notifications";
 import { getEstimatedPrice } from "./pricing";
+import { sendTelegramBookingNotification } from "./telegram";
 
 export async function handleBookingRequest(request: Request) {
   try {
+    logBookingRequestHost(request);
     const body = await request.json();
     const booking = bookingSchema.parse(body);
     assertFutureDate(booking.date);
@@ -17,6 +20,7 @@ export async function handleBookingRequest(request: Request) {
 
     const savedBooking = await saveBooking(pricedBooking);
     const notifications = await sendBookingNotifications(savedBooking);
+    const telegram = await sendTelegramBookingNotification(savedBooking);
     const emailWarning =
       notifications.email === "skipped"
         ? "Booking saved. Email confirmations were skipped because Resend is not configured."
@@ -24,13 +28,13 @@ export async function handleBookingRequest(request: Request) {
           ? "Booking saved. Email confirmations could not be sent."
           : null;
     const telegramWarning =
-      notifications.telegram === "skipped"
+      telegram === "skipped"
         ? "Telegram notification was skipped because Telegram is not configured."
-        : notifications.telegram === "failed"
+        : telegram === "failed"
           ? "Telegram notification could not be sent."
           : null;
     const bookingStatus =
-      notifications.email === "sent" && notifications.telegram === "sent"
+      notifications.email === "sent" && telegram === "sent"
         ? "booking_saved_email_telegram_sent"
         : notifications.email === "sent"
           ? "booking_saved_email_sent"
@@ -44,9 +48,12 @@ export async function handleBookingRequest(request: Request) {
         status: bookingStatus,
         bookingId: savedBooking.id,
         emailSent: notifications.email === "sent",
-        telegramSent: notifications.telegram === "sent",
+        telegramSent: telegram === "sent",
         estimatedPrice: savedBooking.estimatedPrice,
-        notifications,
+        notifications: {
+          ...notifications,
+          telegram,
+        },
         warning: [emailWarning, telegramWarning].filter(Boolean).join(" "),
       },
       { status: 201 }
@@ -77,4 +84,23 @@ export async function handleBookingRequest(request: Request) {
       { status: 500 }
     );
   }
+}
+
+function logBookingRequestHost(request: Request) {
+  let urlOrigin = "unknown";
+
+  try {
+    urlOrigin = new URL(request.url).origin;
+  } catch {
+    urlOrigin = "invalid_request_url";
+  }
+
+  console.info("Booking request host context", {
+    host: request.headers.get("host"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+    origin: request.headers.get("origin"),
+    referer: request.headers.get("referer"),
+    urlOrigin,
+  });
 }

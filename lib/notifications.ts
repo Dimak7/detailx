@@ -5,29 +5,24 @@ import {
   sendBusinessBookingNotification,
   sendCustomerBookingConfirmation,
 } from "./resend";
-import { sendTelegramBookingNotification } from "./telegram";
 
 type NotificationResult = {
   email: "sent" | "skipped" | "failed";
   sms: "sent" | "skipped" | "failed";
-  telegram: "sent" | "skipped" | "failed";
 };
 
 export async function sendBookingNotifications(booking: BookingInput & { id: string }) {
   const result: NotificationResult = {
     email: "skipped",
     sms: "skipped",
-    telegram: "skipped",
   };
 
-  const [emailResult, smsResult, telegramResult] = await Promise.all([
+  const [emailResult, smsResult] = await Promise.all([
     sendEmail(booking),
     sendSms(booking),
-    sendTelegramBookingNotification(booking),
   ]);
   result.email = emailResult;
   result.sms = smsResult;
-  result.telegram = telegramResult;
 
   return result;
 }

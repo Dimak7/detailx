@@ -41,8 +41,8 @@ function Hero() {
     <section className="relative min-h-screen overflow-hidden px-4 pb-16 pt-28 text-white md:pt-36" id="top">
       <div className="absolute inset-0">
         <Image
-          src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1900&q=90"
-          alt="Luxury performance car in a dramatic setting"
+          src="/brand/detailx-work/red-audi-rear.jpg"
+          alt="Red Audi after DETAILX Chicago detailing"
           fill
           priority
           className="object-cover"
@@ -149,8 +149,8 @@ function Difference() {
       <div className="content-shell grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="relative min-h-[560px] overflow-hidden rounded-lg bg-ink">
           <Image
-            src="https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?auto=format&fit=crop&w=1400&q=90"
-            alt="Detailing work on a premium vehicle"
+            src="/brand/detailx-work/matte-green-bmw.jpg"
+            alt="Matte green BMW after DETAILX Chicago detailing"
             fill
             className="object-cover opacity-[0.88]"
             sizes="(min-width: 1024px) 50vw, 100vw"
@@ -298,8 +298,8 @@ function Instagram() {
         </div>
         <a className="group relative min-h-[300px] overflow-hidden rounded-lg bg-ink text-white sm:min-h-[360px] md:min-h-[420px]" href="https://www.instagram.com/detailxchicago/reels/" target="_blank" rel="noreferrer" aria-label="Open DETAILX Chicago reels on Instagram">
           <Image
-            src="https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=900&q=88"
-            alt="Luxury vehicle reel preview"
+            src="/brand/detailx-work/detailx-instagram-audi.jpg"
+            alt="DETAILX Chicago Instagram reel preview"
             fill
             className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
             sizes="360px"

@@ -9,28 +9,28 @@ export const services = pricedServices.map(({ title, code, tone, description }) 
 
 export const galleryImages = [
   {
-    src: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1400&q=88",
-    alt: "Premium sports car with polished exterior",
+    src: "/brand/detailx-work/red-audi-rear.jpg",
+    alt: "Red Audi after DETAILX exterior work",
   },
   {
-    src: "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=900&q=88",
-    alt: "Luxury vehicle cabin and steering wheel",
+    src: "/brand/detailx-work/interior-red-seats.jpg",
+    alt: "Detailed BMW cabin with red leather seats",
   },
   {
-    src: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=900&q=88",
-    alt: "Polished performance car exterior",
+    src: "/brand/detailx-work/matte-green-bmw.jpg",
+    alt: "Matte green BMW after detailing",
   },
   {
-    src: "https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?auto=format&fit=crop&w=900&q=88",
-    alt: "Luxury car paint finish",
+    src: "/brand/detailx-work/red-audi-headlight.jpg",
+    alt: "Close detail of a red Audi headlight and paint",
   },
   {
-    src: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=88",
-    alt: "Red performance car after exterior detailing",
+    src: "/brand/detailx-work/tan-interior-detail.jpg",
+    alt: "Detailed tan leather interior",
   },
   {
-    src: "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=900&q=88",
-    alt: "Vehicle surface ready for detailing work",
+    src: "/brand/detailx-work/dark-interior-detail.jpg",
+    alt: "Detailed dark BMW interior lighting",
   },
 ];
 

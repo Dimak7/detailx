@@ -6,7 +6,7 @@ export const pricedServices = [
     code: "FD",
     tone: "Interior + exterior",
     description: "A full cabin and exterior reset with a crisp final handoff.",
-    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=88",
+    image: "/brand/detailx-work/red-audi-foam.jpg",
     prices: {
       Sedan: 250,
       SUV: 270,
@@ -18,7 +18,7 @@ export const pricedServices = [
     code: "IN",
     tone: "Cabin reset",
     description: "Deep vacuuming, panels, vents, leather care, fabric attention, and odor-minded cleanup.",
-    image: "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=900&q=88",
+    image: "/brand/detailx-work/interior-red-seats.jpg",
     prices: {
       Sedan: 160,
       SUV: 180,
@@ -30,7 +30,7 @@ export const pricedServices = [
     code: "EX",
     tone: "Gloss wash",
     description: "Foam wash, wheels, trim finish, glass, tires, and a sharper exterior presentation.",
-    image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=88",
+    image: "/brand/detailx-work/red-audi-rear.jpg",
     prices: {
       Sedan: 100,
       SUV: 120,
@@ -42,7 +42,7 @@ export const pricedServices = [
     code: "WT",
     tone: "Privacy + comfort",
     description: "A cleaner profile, heat control, and a more finished cabin feel.",
-    image: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=900&q=88",
+    image: "/brand/detailx-work/matte-green-bmw.jpg",
     startingPrice: 200,
   },
   {
@@ -50,7 +50,7 @@ export const pricedServices = [
     code: "CC",
     tone: "Protection",
     description: "Surface prep and coating requests for stronger gloss, easier washing, and durable protection.",
-    image: "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=900&q=88",
+    image: "/brand/detailx-work/red-audi-headlight.jpg",
     startingPrice: 500,
   },
   {
@@ -58,7 +58,7 @@ export const pricedServices = [
     code: "PC",
     tone: "Clarity work",
     description: "Polishing and correction work for swirls, haze, oxidation, and deeper paint clarity.",
-    image: "https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?auto=format&fit=crop&w=900&q=88",
+    image: "/brand/detailx-work/audi-puddle-light.jpg",
     startingPrice: 100,
   },
 ] as const;

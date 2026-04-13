@@ -83,7 +83,7 @@ export async function handleTelegramCallbackQuery(callbackQuery: TelegramCallbac
   try {
     const result = await runTelegramBookingAction(parsed.bookingId, parsed.action);
     await answerTelegramCallback(callbackQuery.id, result.message);
-    await sendTelegramActionFollowup(parsed.bookingId, result.message);
+    await sendTelegramActionFollowup(parsed.bookingId, result.message, callbackQuery);
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Telegram action failed.";
@@ -109,7 +109,7 @@ export async function runTelegramBookingAction(bookingId: string, action: Telegr
     try {
       await sendCustomerBookingConfirmation(booking);
       console.info("Telegram resend email success", { bookingId });
-      return { ok: true, message: `Confirmation email resent for ${booking.name}.` };
+      return { ok: true, message: "Confirmation email resent successfully." };
     } catch (error) {
       console.error("Telegram resend email failed", { bookingId, error });
       return { ok: false, message: "Confirmation email could not be resent." };
@@ -245,7 +245,7 @@ async function answerTelegramCallback(callbackQueryId: string, text: string) {
   }
 }
 
-async function sendTelegramActionFollowup(bookingId: string, message: string) {
+async function sendTelegramActionFollowup(bookingId: string, message: string, callbackQuery: TelegramCallbackQuery) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!chatId) {
@@ -254,20 +254,43 @@ async function sendTelegramActionFollowup(bookingId: string, message: string) {
 
   try {
     const booking = await getBookingById(bookingId);
+    const statusText = [
+      "<b>DETAILX Booking Update</b>",
+      "",
+      escapeTelegramHtml(message),
+      booking ? `<b>Status:</b> ${formatStatus(booking.status)}` : "",
+    ].filter(Boolean).join("\n");
+
+    if (callbackQuery.message?.chat?.id && callbackQuery.message.message_id && booking) {
+      await updateTelegramBookingMessage(callbackQuery, booking);
+    }
+
     await telegramApi("sendMessage", {
       chat_id: chatId,
       parse_mode: "HTML",
-      text: [
-        "<b>DETAILX Booking Update</b>",
-        "",
-        escapeTelegramHtml(message),
-        booking ? `<b>Status:</b> ${formatStatus(booking.status)}` : "",
-      ].filter(Boolean).join("\n"),
+      text: statusText,
       reply_markup: booking ? buildTelegramKeyboard(booking.id, booking.status) : undefined,
     });
   } catch (error) {
     console.error("Telegram action follow-up failed", {
       bookingId,
+      error,
+    });
+  }
+}
+
+async function updateTelegramBookingMessage(callbackQuery: TelegramCallbackQuery, booking: TelegramBooking) {
+  try {
+    await telegramApi("editMessageText", {
+      chat_id: callbackQuery.message?.chat?.id,
+      message_id: callbackQuery.message?.message_id,
+      parse_mode: "HTML",
+      text: buildTelegramBookingMessage(booking),
+      reply_markup: buildTelegramKeyboard(booking.id, booking.status || "pending"),
+    });
+  } catch (error) {
+    console.error("Telegram original message update failed", {
+      bookingId: booking.id,
       error,
     });
   }

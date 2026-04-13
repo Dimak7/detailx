@@ -98,6 +98,7 @@ async function sendEmail(message: {
 function buildCustomerEmailHtml(booking: BookingEmail) {
   const businessEmail = getBusinessEmail();
   const calendarUrl = buildGoogleCalendarUrl(booking);
+  const detailxImageUrl = getPublicAssetUrl("/brand/detailx-work/detailx-instagram-audi.jpg");
   const detailItems = getEmailDetailItems(booking);
   const notes = detailItems.flatMap((detail) => detail.notes ? [`Detail ${detail.lineNumber}: ${detail.notes}`] : []);
 
@@ -123,6 +124,9 @@ function buildCustomerEmailHtml(booking: BookingEmail) {
           </div>
           <div style="margin-top:24px;text-align:center">
             <a href="${escapeHtml(calendarUrl)}" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:13px;font-weight:900;letter-spacing:0.06em;text-decoration:none;text-transform:uppercase;padding:15px 22px">Add to Google Calendar</a>
+          </div>
+          <div style="margin-top:24px;border-radius:8px;overflow:hidden;background:#050506">
+            <img src="${escapeHtml(detailxImageUrl)}" alt="DETAILX Chicago work" width="632" style="display:block;width:100%;max-width:100%;height:auto;border:0" />
           </div>
         </div>
         <div style="background:#050506;border-radius:0 0 8px 8px;padding:22px 26px;color:#c7c9c7;font-size:13px">
@@ -168,6 +172,11 @@ function buildBusinessEmailHtml(booking: BookingEmail) {
       </div>
     </div>
   `;
+}
+
+function getPublicAssetUrl(path: string) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://detailxchicago.com";
+  return `${siteUrl.replace(/\/$/, "")}${path}`;
 }
 
 function buildGoogleCalendarUrl(booking: BookingEmail) {

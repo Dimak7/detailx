@@ -171,9 +171,14 @@ function RevenueChart({ series }: { series: Array<{ date: string; revenue: numbe
       {points.filter((_, index) => index % Math.max(1, Math.ceil(points.length / 8)) === 0 || index === points.length - 1).map((point) => (
         <g key={point.date}>
           <circle cx={point.x} cy={point.y} fill="#ffffff" r="5" />
-          <text fill="#c7c9c7" fontSize="18" fontWeight="800" textAnchor="middle" x={point.x} y={height - 8}>{point.date.slice(5)}</text>
+          <text fill="#c7c9c7" fontSize="14" fontWeight="800" textAnchor="middle" x={point.x} y={height - 10}>{formatChartDate(point.date)}</text>
         </g>
       ))}
     </svg>
   );
+}
+
+function formatChartDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(year, month - 1, day));
 }

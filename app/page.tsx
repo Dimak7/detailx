@@ -3,6 +3,8 @@ import { BookingForm } from "@/components/booking/BookingForm";
 import { Nav } from "@/components/Nav";
 import { galleryImages, processSteps, reasons, services, testimonials } from "@/lib/siteData";
 
+const googleBusinessUrl = "https://share.google/KsLW0nq1eJoenaYYe";
+
 const proofPoints = [
   ["Quality Work", "Careful details. Sharp finish."],
   ["Simple Process", "Choose a time. We come to you."],
@@ -149,8 +151,8 @@ function Difference() {
       <div className="content-shell grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="relative min-h-[560px] overflow-hidden rounded-lg bg-ink">
           <Image
-            src="/brand/detailx-work/matte-green-bmw.jpg"
-            alt="Matte green BMW after DETAILX Chicago detailing"
+            src="/brand/detailx-work/black-porsche-studio.jpg"
+            alt="Black Porsche in a clean detailing studio"
             fill
             className="object-cover opacity-[0.88]"
             sizes="(min-width: 1024px) 50vw, 100vw"
@@ -381,6 +383,7 @@ function ContactFooter() {
               <a className="transition hover:text-white" href="tel:3129299580">3129299580</a>
               <a className="transition hover:text-white" href="mailto:sales@detailxchicago.com">sales@detailxchicago.com</a>
               <a className="transition hover:text-white" href="https://www.instagram.com/detailxchicago/" target="_blank" rel="noreferrer">@detailxchicago</a>
+              <a className="transition hover:text-white" href={googleBusinessUrl} target="_blank" rel="noreferrer">Google Business Profile</a>
               <p>Chicago service area</p>
             </div>
           </div>
@@ -393,8 +396,9 @@ function ContactFooter() {
                 ["Results", "#work"],
                 ["Reviews", "#reviews"],
                 ["FAQ", "#faq"],
+                ["Google Business", googleBusinessUrl],
               ].map(([label, href]) => (
-                <a className="transition hover:text-white" href={href} key={href}>{label}</a>
+                <a className="transition hover:text-white" href={href} key={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined}>{label}</a>
               ))}
             </nav>
           </div>

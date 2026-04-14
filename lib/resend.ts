@@ -98,7 +98,7 @@ async function sendEmail(message: {
 function buildCustomerEmailHtml(booking: BookingEmail) {
   const businessEmail = getBusinessEmail();
   const calendarUrl = buildGoogleCalendarUrl(booking);
-  const detailxImageUrl = getPublicAssetUrl("/brand/detailx-work/detailx-instagram-audi.jpg");
+  const detailxImageUrl = getPublicAssetUrl("/brand/detailx-work/black-porsche-studio.jpg");
   const detailItems = getEmailDetailItems(booking);
   const notes = detailItems.flatMap((detail) => detail.notes ? [`Detail ${detail.lineNumber}: ${detail.notes}`] : []);
 

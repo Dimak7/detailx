@@ -11,6 +11,8 @@ const navItems = [
   ["FAQ", "#faq"],
 ];
 
+const googleBusinessUrl = "https://share.google/KsLW0nq1eJoenaYYe";
+
 export function Nav() {
   const [open, setOpen] = useState(false);
 
@@ -36,8 +38,8 @@ export function Nav() {
         </div>
 
         <div className="hidden justify-end gap-3 lg:flex">
-          <a className="rounded-lg border border-white/[0.15] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10" href="#work">
-            See Results
+          <a className="rounded-lg border border-white/[0.15] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10" href={googleBusinessUrl} target="_blank" rel="noreferrer">
+            Google Profile
           </a>
           <a className="rounded-lg bg-red px-5 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(193,18,31,0.32)] transition hover:-translate-y-0.5 hover:bg-red-dark" href="#booking">
             Book Detail
@@ -56,6 +58,9 @@ export function Nav() {
               {label}
             </a>
           ))}
+          <a className="rounded-lg px-3 py-3 font-bold text-ash hover:bg-white/10 hover:text-white" href={googleBusinessUrl} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
+            Google Business Profile
+          </a>
           <a className="rounded-lg bg-red px-3 py-3 text-center font-black text-white" href="#booking" onClick={() => setOpen(false)}>
             Book Detail
           </a>

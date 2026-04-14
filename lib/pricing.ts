@@ -6,7 +6,7 @@ export const pricedServices = [
     code: "FD",
     tone: "Interior + exterior",
     description: "A full cabin and exterior reset with a crisp final handoff.",
-    image: "/brand/detailx-work/red-audi-foam.jpg",
+    image: "/brand/detailx-work/black-porsche-studio.jpg",
     prices: {
       Sedan: 250,
       SUV: 270,
@@ -18,7 +18,7 @@ export const pricedServices = [
     code: "IN",
     tone: "Cabin reset",
     description: "Deep vacuuming, panels, vents, leather care, fabric attention, and odor-minded cleanup.",
-    image: "/brand/detailx-work/interior-red-seats.jpg",
+    image: "/brand/detailx-work/white-bmw-interior.jpg",
     prices: {
       Sedan: 160,
       SUV: 180,
@@ -30,7 +30,7 @@ export const pricedServices = [
     code: "EX",
     tone: "Gloss wash",
     description: "Foam wash, wheels, trim finish, glass, tires, and a sharper exterior presentation.",
-    image: "/brand/detailx-work/red-audi-rear.jpg",
+    image: "/brand/detailx-work/black-mercedes-rear.jpg",
     prices: {
       Sedan: 100,
       SUV: 120,
@@ -42,7 +42,7 @@ export const pricedServices = [
     code: "WT",
     tone: "Privacy + comfort",
     description: "A cleaner profile, heat control, and a more finished cabin feel.",
-    image: "/brand/detailx-work/matte-green-bmw.jpg",
+    image: "/brand/detailx-work/mercedes-tail-light.jpg",
     startingPrice: 200,
   },
   {
@@ -50,7 +50,7 @@ export const pricedServices = [
     code: "CC",
     tone: "Protection",
     description: "Surface prep and coating requests for stronger gloss, easier washing, and durable protection.",
-    image: "/brand/detailx-work/red-audi-headlight.jpg",
+    image: "/brand/detailx-work/white-porsche-garage.jpg",
     startingPrice: 500,
   },
   {
@@ -58,7 +58,7 @@ export const pricedServices = [
     code: "PC",
     tone: "Clarity work",
     description: "Polishing and correction work for swirls, haze, oxidation, and deeper paint clarity.",
-    image: "/brand/detailx-work/audi-puddle-light.jpg",
+    image: "/brand/detailx-work/bmw-dash-detail.jpg",
     startingPrice: 100,
   },
 ] as const;

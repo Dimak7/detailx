@@ -43,8 +43,8 @@ function Hero() {
     <section className="relative min-h-screen overflow-hidden px-4 pb-16 pt-28 text-white md:pt-36" id="top">
       <div className="absolute inset-0">
         <Image
-          src="/brand/detailx-work/detailx-instagram-audi.jpg"
-          alt="DETAILX Chicago Instagram profile in a detailed Audi cabin"
+          src="/brand/detailx-work/silver-porsche-street.jpg"
+          alt="Silver Porsche on a city street for DETAILX Chicago"
           fill
           priority
           className="object-cover"

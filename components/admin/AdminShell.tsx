@@ -90,14 +90,14 @@ export function StatusBadge({ status }: { status: string }) {
   return <span className={`rounded-lg px-3 py-1 text-xs font-black uppercase ${color}`}>{status}</span>;
 }
 
-export function FlashMessage({ status }: { status?: string }) {
+export function FlashMessage({ status, message }: { status?: string; message?: string }) {
   if (!status) {
     return null;
   }
 
   return (
     <p className={`mb-5 rounded-lg px-4 py-3 text-sm font-black uppercase ${status === "saved" ? "bg-ink text-white" : "bg-red-soft text-ink"}`}>
-      {status === "saved" ? "Admin update saved." : "Admin update failed. Check server logs for details."}
+      {message || (status === "saved" ? "Admin update saved." : "Invoice could not be created. Check Stripe setup or booking data.")}
     </p>
   );
 }

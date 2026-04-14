@@ -3,13 +3,13 @@ import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/A
 import { formatMoney } from "@/lib/adminData";
 import { listInvoices } from "@/lib/invoiceStore";
 
-export default async function AdminInvoicesPage({ searchParams }: { searchParams?: Promise<{ adminStatus?: string; payment?: string }> }) {
+export default async function AdminInvoicesPage({ searchParams }: { searchParams?: Promise<{ adminStatus?: string; adminMessage?: string; payment?: string }> }) {
   const params = await searchParams;
   const invoices = await listInvoices();
 
   return (
     <>
-      <FlashMessage status={params?.adminStatus} />
+      <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
       {params?.payment ? <p className="mb-5 rounded-lg bg-ink px-4 py-3 text-sm font-black uppercase text-white">Stripe payment returned: {params.payment}</p> : null}
       <AdminPageHeader
         eyebrow="Payments"

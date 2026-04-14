@@ -4,7 +4,7 @@ import { getBookingDetails, addDays, getDateString } from "@/lib/adminData";
 import { getAvailability, listBookingsByDate, listScheduleBlocks } from "@/lib/bookingStore";
 import { timeSlots } from "@/lib/schedule";
 
-export default async function AdminSchedulePage({ searchParams }: { searchParams?: Promise<{ date?: string; view?: string; adminStatus?: string }> }) {
+export default async function AdminSchedulePage({ searchParams }: { searchParams?: Promise<{ date?: string; view?: string; adminStatus?: string; adminMessage?: string }> }) {
   const params = await searchParams;
   const date = params?.date || getDateString(new Date());
   const view = params?.view === "week" ? "week" : "day";
@@ -18,7 +18,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
 
   return (
     <>
-      <FlashMessage status={params?.adminStatus} />
+      <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
       <AdminPageHeader
         eyebrow="Calendar"
         title="Schedule"

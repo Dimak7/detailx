@@ -9,8 +9,8 @@ export const services = pricedServices.map(({ title, code, tone, description }) 
 
 export const galleryImages = [
   {
-    src: "/brand/detailx-work/black-porsche-studio.jpg",
-    alt: "Black Porsche in a clean detailing studio",
+    src: "/brand/detailx-work/black-porsche-driveway.jpg",
+    alt: "Black Porsche in a driveway after DETAILX Chicago detailing",
   },
   {
     src: "/brand/detailx-work/white-bmw-interior.jpg",

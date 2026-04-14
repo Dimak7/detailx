@@ -18,6 +18,7 @@ export async function POST(request: Request) {
   const action = String(formData.get("action") || "");
   const returnTo = String(formData.get("returnTo") || "/admin/dashboard");
   let handled = false;
+  let adminMessage = "Admin update saved.";
 
   try {
     if (action === "update-booking-status") {
@@ -62,11 +63,18 @@ export async function POST(request: Request) {
 
     if (action === "create-invoice") {
       handled = true;
-      const booking = await getBookingById(String(formData.get("bookingId") || ""));
+      const bookingId = String(formData.get("bookingId") || "");
+      console.info("Admin invoice action started", { bookingId });
+      const booking = await getBookingById(bookingId);
       if (!booking) {
         throw new Error("Booking was not found.");
       }
-      await createStripeInvoiceForBooking(booking);
+      console.info("Admin invoice booking loaded", { bookingId: booking.id });
+      const invoiceResult = await createStripeInvoiceForBooking(booking);
+      if (!invoiceResult.success) {
+        throw new Error(invoiceResult.error || "Invoice could not be created. Check Stripe setup or booking data.");
+      }
+      adminMessage = "Invoice created. Payment link is ready.";
     }
 
     if (action === "update-invoice-status") {
@@ -82,15 +90,21 @@ export async function POST(request: Request) {
       throw new Error("Choose an admin action.");
     }
 
-    return NextResponse.redirect(new URL(withFlash(returnTo, "saved"), request.url), { status: 303 });
+    return NextResponse.redirect(new URL(withFlash(returnTo, "saved", adminMessage), request.url), { status: 303 });
   } catch (error) {
     console.error("Admin action failed", { action, error });
-    return NextResponse.redirect(new URL(withFlash(returnTo, "error"), request.url), { status: 303 });
+    const errorMessage = error instanceof Error && error.message
+      ? error.message
+      : "Invoice could not be created. Check Stripe setup or booking data.";
+    return NextResponse.redirect(new URL(withFlash(returnTo, "error", errorMessage), request.url), { status: 303 });
   }
 }
 
-function withFlash(path: string, status: "saved" | "error") {
+function withFlash(path: string, status: "saved" | "error", message?: string) {
   const url = new URL(path.startsWith("http") ? path : `https://detailxchicago.com${path}`);
   url.searchParams.set("adminStatus", status);
+  if (message) {
+    url.searchParams.set("adminMessage", message);
+  }
   return `${url.pathname}${url.search}`;
 }

@@ -21,6 +21,10 @@ export type InvoiceRecord = {
   updatedAt: string;
 };
 
+export type InvoiceCreationResult =
+  | { success: true; invoice: InvoiceRecord; paymentUrl: string }
+  | { success: false; error: string };
+
 type InvoiceRow = {
   id: string;
   booking_id: string;
@@ -69,59 +73,90 @@ export async function listInvoices() {
   return readLocalInvoices();
 }
 
-export async function createStripeInvoiceForBooking(booking: StoredBooking) {
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeKey) {
-    throw new Error("STRIPE_SECRET_KEY is not configured.");
+export async function createStripeInvoiceForBooking(booking: StoredBooking): Promise<InvoiceCreationResult> {
+  console.info("Invoice creation started", { bookingId: booking.id });
+
+  try {
+    const validation = validateInvoiceBookingInput(booking);
+    if (!validation.success) {
+      console.error("Invoice validation failed", { bookingId: booking.id, error: validation.error });
+      return validation;
+    }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      console.error("Stripe invoice creation skipped: STRIPE_SECRET_KEY is not configured.", { bookingId: booking.id });
+      return { success: false, error: "STRIPE_SECRET_KEY is not configured." };
+    }
+
+    const { amount, amountInCents, customerEmail, customerName, serviceDescription, siteUrl } = validation;
+    const body = new URLSearchParams({
+      mode: "payment",
+      success_url: `${siteUrl}/admin/invoices?payment=success`,
+      cancel_url: `${siteUrl}/admin/invoices?payment=cancelled`,
+      customer_email: customerEmail,
+      "line_items[0][quantity]": "1",
+      "line_items[0][price_data][currency]": "usd",
+      "line_items[0][price_data][unit_amount]": String(amountInCents),
+      "line_items[0][price_data][product_data][name]": `DETAILX Chicago - ${serviceDescription}`,
+      "metadata[booking_id]": booking.id,
+      "metadata[customer_email]": customerEmail,
+    });
+
+    console.info("Stripe invoice request started", {
+      bookingId: booking.id,
+      amount,
+      amountInCents,
+      customerEmail,
+      siteUrl,
+    });
+
+    const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${stripeKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+    const data = await response.json().catch(() => null) as { id?: string; url?: string; error?: { message?: string } } | null;
+
+    if (!response.ok || !data?.url || !data.id) {
+      const error = data?.error?.message || `Stripe could not create a payment link. Status: ${response.status}`;
+      console.error("Stripe invoice creation failed", { bookingId: booking.id, status: response.status, error, response: data });
+      return { success: false, error };
+    }
+
+    console.info("Stripe invoice creation succeeded", { bookingId: booking.id, stripeSessionId: data.id, paymentUrl: data.url });
+
+    const invoice = await saveInvoice({
+      id: randomUUID(),
+      bookingId: booking.id,
+      customerName,
+      customerEmail,
+      amount,
+      status: "sent",
+      paymentUrl: data.url,
+      stripeSessionId: data.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    try {
+      await sendInvoicePaymentEmail(invoice);
+      console.info("Invoice payment email sent", { bookingId: booking.id, invoiceId: invoice.id });
+    } catch (error) {
+      console.error("Invoice payment email failed after Stripe success", { bookingId: booking.id, invoiceId: invoice.id, error });
+    }
+
+    return { success: true, invoice, paymentUrl: invoice.paymentUrl };
+  } catch (error) {
+    console.error("Invoice creation crashed safely", { bookingId: booking.id, error });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Invoice could not be created. Check Stripe setup or booking data.",
+    };
   }
-
-  const amount = getBookingAmount(booking);
-  if (!amount) {
-    throw new Error("Booking does not have a billable amount.");
-  }
-
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://detailxchicago.com").replace(/\/$/, "");
-  const details = getBookingDetails(booking).map((detail) => `${detail.service} / ${detail.vehicleType}`).join(", ");
-  const body = new URLSearchParams({
-    mode: "payment",
-    success_url: `${siteUrl}/admin/invoices?payment=success`,
-    cancel_url: `${siteUrl}/admin/invoices?payment=cancelled`,
-    customer_email: booking.email,
-    "line_items[0][quantity]": "1",
-    "line_items[0][price_data][currency]": "usd",
-    "line_items[0][price_data][unit_amount]": String(amount * 100),
-    "line_items[0][price_data][product_data][name]": `DETAILX Chicago - ${details}`,
-    "metadata[booking_id]": booking.id,
-  });
-
-  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${stripeKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-  const data = await response.json().catch(() => null) as { id?: string; url?: string; error?: { message?: string } } | null;
-
-  if (!response.ok || !data?.url || !data.id) {
-    throw new Error(data?.error?.message || "Stripe could not create a payment link.");
-  }
-
-  const invoice = await saveInvoice({
-    id: randomUUID(),
-    bookingId: booking.id,
-    customerName: booking.name,
-    customerEmail: booking.email,
-    amount,
-    status: "sent",
-    paymentUrl: data.url,
-    stripeSessionId: data.id,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-  await sendInvoicePaymentEmail(invoice);
-  return invoice;
 }
 
 export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
@@ -212,4 +247,71 @@ function mapInvoiceRow(row: InvoiceRow): InvoiceRecord {
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   };
+}
+
+function validateInvoiceBookingInput(booking: StoredBooking):
+  | {
+      success: true;
+      amount: number;
+      amountInCents: number;
+      customerEmail: string;
+      customerName: string;
+      serviceDescription: string;
+      siteUrl: string;
+    }
+  | { success: false; error: string } {
+  console.info("Invoice booking loaded", {
+    bookingId: booking.id,
+    hasName: Boolean(booking.name),
+    hasEmail: Boolean(booking.email),
+    estimatedPrice: booking.estimatedPrice,
+  });
+
+  const customerEmail = (booking.email || "").trim();
+  const customerName = (booking.name || "").trim();
+  const amount = getBookingAmount(booking);
+  const amountInCents = Math.round(amount * 100);
+  const serviceDescription = getBookingDetails(booking)
+    .map((detail) => `${detail.service} / ${detail.vehicleType}`)
+    .filter(Boolean)
+    .join(", ")
+    .trim();
+  const siteUrl = getSiteUrl();
+
+  if (!booking.id) {
+    return { success: false, error: "Booking ID is missing." };
+  }
+
+  if (!customerEmail) {
+    return { success: false, error: "Customer email is missing." };
+  }
+
+  if (!customerName) {
+    return { success: false, error: "Customer name is missing." };
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(amountInCents)) {
+    return { success: false, error: "Booking total is missing or invalid." };
+  }
+
+  if (!serviceDescription) {
+    return { success: false, error: "Service description is missing." };
+  }
+
+  if (!siteUrl) {
+    return { success: false, error: "NEXT_PUBLIC_SITE_URL is invalid." };
+  }
+
+  return { success: true, amount, amountInCents, customerEmail, customerName, serviceDescription, siteUrl };
+}
+
+function getSiteUrl() {
+  const rawUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://detailxchicago.com").replace(/\/$/, "");
+
+  try {
+    const url = new URL(rawUrl);
+    return url.origin;
+  } catch {
+    return "";
+  }
 }

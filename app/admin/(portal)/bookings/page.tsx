@@ -4,7 +4,7 @@ import { listBookings, type BookingStatus } from "@/lib/bookingStore";
 import { pricedServices } from "@/lib/pricing";
 import { timeSlots } from "@/lib/schedule";
 
-export default async function AdminBookingsPage({ searchParams }: { searchParams?: Promise<{ date?: string; status?: BookingStatus | "all"; service?: string; search?: string; adminStatus?: string }> }) {
+export default async function AdminBookingsPage({ searchParams }: { searchParams?: Promise<{ date?: string; status?: BookingStatus | "all"; service?: string; search?: string; adminStatus?: string; adminMessage?: string }> }) {
   const params = await searchParams;
   const bookings = await listBookings({
     date: params?.date,
@@ -21,7 +21,7 @@ export default async function AdminBookingsPage({ searchParams }: { searchParams
 
   return (
     <>
-      <FlashMessage status={params?.adminStatus} />
+      <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
       <AdminPageHeader eyebrow="Manage" title="Bookings" copy="Confirm, cancel, resend confirmations, create invoices, and review customer details." />
       <form className="mb-5 grid gap-3 rounded-lg bg-white p-4 ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_1fr_1fr_auto]" action="/admin/bookings">
         <input className="admin-input" name="search" defaultValue={params?.search || ""} placeholder="Search customer, email, phone" />

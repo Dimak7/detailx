@@ -6,7 +6,7 @@ export const pricedServices = [
     code: "FD",
     tone: "Interior + exterior",
     description: "A full cabin and exterior reset with a crisp final handoff.",
-    image: "/brand/detailx-work/black-porsche-studio.jpg",
+    image: "/brand/detailx-work/black-porsche-driveway.jpg",
     prices: {
       Sedan: 250,
       SUV: 270,

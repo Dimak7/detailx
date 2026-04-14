@@ -4,7 +4,7 @@ import { formatMoney, getBookingDetails, getDashboardMetrics } from "@/lib/admin
 import { listBookings } from "@/lib/bookingStore";
 import { listInvoices } from "@/lib/invoiceStore";
 
-export default async function AdminDashboardPage({ searchParams }: { searchParams?: Promise<{ adminStatus?: string }> }) {
+export default async function AdminDashboardPage({ searchParams }: { searchParams?: Promise<{ adminStatus?: string; adminMessage?: string }> }) {
   const params = await searchParams;
   const bookings = await listBookings();
   const invoices = await listInvoices();
@@ -13,7 +13,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
   return (
     <>
-      <FlashMessage status={params?.adminStatus} />
+      <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
       <AdminPageHeader
         eyebrow="Operations"
         title="Dashboard"

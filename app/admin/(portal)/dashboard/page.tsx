@@ -40,18 +40,24 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           <div>
             <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Business performance</p>
             <h2 className="mt-2 text-3xl font-black uppercase leading-none">{days}-day view</h2>
-            <p className="mt-2 text-sm font-bold text-steel">{analytics.rangeStart} / {analytics.rangeEnd}</p>
+            <p className="mt-3 inline-flex rounded-lg bg-smoke px-3 py-2 text-xs font-black uppercase text-steel ring-1 ring-ink/5">
+              {formatDisplayDate(analytics.rangeStart)} - {formatDisplayDate(analytics.rangeEnd)}
+            </p>
           </div>
-          <div className="inline-flex w-full rounded-lg bg-smoke p-1 lg:w-auto">
-            {timelineOptions.map((option) => (
-              <Link
-                className={`flex-1 rounded-md px-3 py-2 text-center text-xs font-black uppercase transition lg:flex-none ${days === option ? "bg-ink text-white shadow-sm" : "text-steel hover:bg-white hover:text-ink"}`}
-                href={`/admin/dashboard?range=${option}`}
-                key={option}
-              >
-                {option}D
-              </Link>
-            ))}
+          <div className="rounded-lg bg-ink p-2 text-white shadow-sm">
+            <p className="px-2 pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-ash">Timeframe</p>
+            <div className="grid grid-cols-4 gap-1">
+              {timelineOptions.map((option) => (
+                <Link
+                  className={`rounded-md px-3 py-2 text-center text-xs font-black uppercase transition ${days === option ? "bg-red text-white shadow-sm" : "bg-white/10 text-ash hover:bg-white hover:text-ink"}`}
+                  href={`/admin/dashboard?range=${option}`}
+                  key={option}
+                >
+                  {option}
+                  <span className="ml-0.5 text-[9px]">D</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -131,6 +137,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 function parseTimelineRange(value?: string) {
   const parsed = Number(value || 30);
   return timelineOptions.includes(parsed as (typeof timelineOptions)[number]) ? parsed : 30;
+}
+
+function formatDisplayDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(year, month - 1, day));
 }
 
 function RevenueChart({ series }: { series: Array<{ date: string; revenue: number; bookings: number }> }) {

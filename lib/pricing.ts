@@ -50,7 +50,7 @@ export const pricedServices = [
     code: "CC",
     tone: "Protection",
     description: "Surface prep and coating requests for stronger gloss, easier washing, and durable protection.",
-    image: "/brand/detailx-work/white-porsche-garage.jpg",
+    image: "/brand/detailx-work/red-audi-foam.jpg",
     startingPrice: 500,
   },
   {
@@ -58,7 +58,7 @@ export const pricedServices = [
     code: "PC",
     tone: "Clarity work",
     description: "Polishing and correction work for swirls, haze, oxidation, and deeper paint clarity.",
-    image: "/brand/detailx-work/bmw-dash-detail.jpg",
+    image: "/brand/detailx-work/audi-puddle-light.jpg",
     startingPrice: 100,
   },
 ] as const;

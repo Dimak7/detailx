@@ -25,12 +25,12 @@ export const galleryImages = [
     alt: "Mercedes tail light and polished rear detail",
   },
   {
-    src: "/brand/detailx-work/bmw-dash-detail.jpg",
-    alt: "BMW dashboard and trim detail",
+    src: "/brand/detailx-work/audi-puddle-light.jpg",
+    alt: "Audi puddle light detail after service",
   },
   {
-    src: "/brand/detailx-work/white-porsche-garage.jpg",
-    alt: "White Porsche in a clean garage setting",
+    src: "/brand/detailx-work/red-audi-foam.jpg",
+    alt: "Foam wash during a DETAILX exterior detail",
   },
 ];
 

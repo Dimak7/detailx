@@ -1,10 +1,11 @@
 import { AdminPageHeader, FlashMessage } from "@/components/admin/AdminShell";
+import { ClientEmailForm, type PromotionTemplate } from "@/components/admin/ClientEmailForm";
 import { buildAdminClients, formatMoney } from "@/lib/adminData";
 import { listBookings } from "@/lib/bookingStore";
 
 export const dynamic = "force-dynamic";
 
-const promotionTemplates = [
+const promotionTemplates: PromotionTemplate[] = [
   {
     label: "10% off",
     subject: "10% off your next DETAILX Chicago detail",
@@ -66,26 +67,14 @@ export default async function AdminClientsPage({ searchParams }: { searchParams?
             </div>
             <details className="mt-4 rounded-lg border border-ink/10 bg-white p-4">
               <summary className="cursor-pointer font-black uppercase text-red">Email client</summary>
-              <form className="mt-4 grid gap-3" action="/api/admin/actions" method="post">
-                <input type="hidden" name="action" value="send-client-promotion" />
-                <input type="hidden" name="returnTo" value={`/admin/clients?${new URLSearchParams({
+              <ClientEmailForm
+                client={{ name: client.name, email: client.email }}
+                returnTo={`/admin/clients?${new URLSearchParams({
                   ...(params?.search ? { search: params.search } : {}),
                   ...(segment !== "all" ? { segment } : {}),
-                }).toString()}`} />
-                <input type="hidden" name="name" value={client.name} />
-                <input type="hidden" name="email" value={client.email} />
-                <div className="grid gap-2 md:grid-cols-3">
-                  {promotionTemplates.map((template) => (
-                    <div className="rounded-lg bg-smoke p-3 text-xs font-black uppercase text-ink" key={template.label}>
-                      {template.label}
-                      <span className="mt-1 block text-[11px] font-bold normal-case text-steel">{template.subject}</span>
-                    </div>
-                  ))}
-                </div>
-                <input className="admin-input" name="subject" defaultValue={promotionTemplates[0].subject} placeholder="Subject" required />
-                <textarea className="admin-input min-h-32 resize-y" name="message" defaultValue={promotionTemplates[0].message} placeholder="Message" required />
-                <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white" type="submit">Send Email</button>
-              </form>
+                }).toString()}`}
+                templates={promotionTemplates}
+              />
             </details>
           </article>
         )) : <p className="rounded-lg bg-white p-8 text-center font-bold text-steel ring-1 ring-ink/10">No clients match this view.</p>}

@@ -18,6 +18,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   const metrics = getDashboardMetrics(bookings);
   const analytics = getDashboardAnalytics(bookings, { days, marketingExpense: businessSettings.marketingExpense });
   const unpaidInvoices = invoices.filter((invoice) => invoice.status !== "paid" && invoice.status !== "cancelled");
+  const metricCards = [
+    ["Total revenue", formatMoney(analytics.revenue)],
+    ["Total clients", analytics.totalClients],
+    ["Profit", formatMoney(analytics.profit)],
+    ["Marketing", formatMoney(analytics.marketingExpense)],
+  ];
 
   return (
     <>
@@ -29,52 +35,64 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         action={<Link className="rounded-lg bg-red px-5 py-4 text-center font-black uppercase text-white" href="/admin/schedule">Open Schedule</Link>}
       />
 
-      <section className="mb-5 flex flex-wrap gap-2">
-        {timelineOptions.map((option) => (
-          <Link
-            className={`rounded-lg px-4 py-3 text-sm font-black uppercase ${days === option ? "bg-ink text-white" : "bg-white text-ink ring-1 ring-ink/10"}`}
-            href={`/admin/dashboard?range=${option}`}
-            key={option}
-          >
-            {option} days
-          </Link>
-        ))}
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Total revenue", formatMoney(analytics.revenue)],
-          ["Total clients", analytics.totalClients],
-          ["Profit", formatMoney(analytics.profit)],
-          ["Marketing expense", formatMoney(analytics.marketingExpense)],
-        ].map(([label, value]) => (
-          <article className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-ink/10" key={label}>
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-red">{label}</p>
-            <p className="mt-4 text-4xl font-black uppercase leading-none">{value}</p>
-            <p className="mt-3 text-xs font-bold uppercase text-steel">{analytics.rangeStart} / {analytics.rangeEnd}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-lg bg-ink p-5 text-white shadow-sm xl:col-span-2">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Revenue trend</p>
-              <h2 className="mt-2 text-3xl font-black uppercase leading-none">{days}-day performance</h2>
-            </div>
-            <form className="grid gap-2 rounded-lg bg-white/10 p-3 md:grid-cols-[180px_auto]" action="/api/admin/actions" method="post">
-              <input type="hidden" name="action" value="update-business-metrics" />
-              <input type="hidden" name="returnTo" value={`/admin/dashboard?range=${days}`} />
-              <input className="admin-input" name="marketingExpense" type="number" min="0" step="1" defaultValue={analytics.marketingExpense} aria-label="Marketing expense" />
-              <button className="rounded-lg bg-red px-4 py-3 text-sm font-black uppercase text-white" type="submit">Save marketing</button>
-            </form>
+      <section className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-ink/10 md:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Business performance</p>
+            <h2 className="mt-2 text-3xl font-black uppercase leading-none">{days}-day view</h2>
+            <p className="mt-2 text-sm font-bold text-steel">{analytics.rangeStart} / {analytics.rangeEnd}</p>
           </div>
-          <div className="mt-6 overflow-hidden rounded-lg bg-white/[0.06] p-3">
-            <RevenueChart series={analytics.series} />
+          <div className="inline-flex w-full rounded-lg bg-smoke p-1 lg:w-auto">
+            {timelineOptions.map((option) => (
+              <Link
+                className={`flex-1 rounded-md px-3 py-2 text-center text-xs font-black uppercase transition lg:flex-none ${days === option ? "bg-ink text-white shadow-sm" : "text-steel hover:bg-white hover:text-ink"}`}
+                href={`/admin/dashboard?range=${option}`}
+                key={option}
+              >
+                {option}D
+              </Link>
+            ))}
           </div>
         </div>
 
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {metricCards.map(([label, value]) => (
+            <article className="rounded-lg bg-smoke p-4 ring-1 ring-ink/5" key={label}>
+              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-steel">{label}</p>
+              <p className="mt-3 text-2xl font-black uppercase leading-none text-ink md:text-3xl">{value}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_280px]">
+          <div className="rounded-lg bg-ink p-4 text-white">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Revenue trend</p>
+              <h3 className="mt-2 text-2xl font-black uppercase leading-none">Daily revenue</h3>
+            </div>
+            <div className="mt-4 overflow-hidden rounded-lg bg-white/[0.06] p-2">
+              <RevenueChart series={analytics.series} />
+            </div>
+          </div>
+
+          <aside className="rounded-lg bg-smoke p-4 ring-1 ring-ink/5">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Inputs</p>
+            <h3 className="mt-2 text-xl font-black uppercase leading-none">Expense control</h3>
+            <p className="mt-2 text-sm font-bold leading-6 text-steel">Profit is revenue minus marketing for this first dashboard version.</p>
+            <form className="mt-4 grid gap-3" action="/api/admin/actions" method="post">
+              <input type="hidden" name="action" value="update-business-metrics" />
+              <input type="hidden" name="returnTo" value={`/admin/dashboard?range=${days}`} />
+              <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-steel">
+                Marketing expense
+                <input className="admin-input bg-white" name="marketingExpense" type="number" min="0" step="1" defaultValue={analytics.marketingExpense} aria-label="Marketing expense" />
+              </label>
+              <button className="rounded-lg bg-red px-4 py-3 text-sm font-black uppercase text-white" type="submit">Save input</button>
+            </form>
+          </aside>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-ink/10">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-2xl font-black uppercase leading-none">Upcoming bookings</h2>

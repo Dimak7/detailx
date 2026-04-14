@@ -118,14 +118,27 @@ export async function POST(request: Request) {
       const name = String(formData.get("name") || "").trim();
       const subject = String(formData.get("subject") || "").trim();
       const message = String(formData.get("message") || "").trim();
-      console.info("Admin client promotion email started", { to, hasSubject: Boolean(subject), hasMessage: Boolean(message) });
+      const template = String(formData.get("template") || "Custom").trim();
+      console.info("Admin client email action started", { to, template, hasSubject: Boolean(subject), hasMessage: Boolean(message) });
+      console.info("Admin client email template selected", { template });
 
-      if (!to || !name || !subject || !message) {
-        throw new Error("Client email, name, subject, and message are required.");
+      if (!to || !isEmailAddress(to)) {
+        throw new Error("Client email is missing or invalid.");
       }
 
-      await sendClientPromotionEmail({ to, name, subject, message });
-      console.info("Admin client promotion email sent", { to });
+      if (!name || !subject || !message) {
+        throw new Error("Client name, subject, and message are required.");
+      }
+
+      try {
+        console.info("Admin client email send started", { to, template });
+        await sendClientPromotionEmail({ to, name, subject, message });
+        console.info("Admin client email send success", { to, template });
+      } catch (error) {
+        console.error("Admin client email send failed", { to, template, error });
+        throw new Error("Client email could not be sent. Check Resend setup and the client email address.");
+      }
+
       adminMessage = "Client email sent.";
     }
 
@@ -149,11 +162,27 @@ export async function POST(request: Request) {
     console.error("Admin action failed", { action, error });
     const errorMessage = error instanceof Error && error.message
       ? error.message
-      : "Invoice could not be created. Check Stripe setup or booking data.";
+      : getDefaultAdminActionError(action);
     const redirectUrl = new URL(withFlash(returnTo, "error", errorMessage), request.url);
     console.info("Admin action final response returned", { action, redirectTo: `${redirectUrl.pathname}${redirectUrl.search}`, failed: true });
     return NextResponse.redirect(redirectUrl, { status: 303 });
   }
+}
+
+function isEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function getDefaultAdminActionError(action: string) {
+  if (action === "send-client-promotion") {
+    return "Client email could not be sent.";
+  }
+
+  if (action === "create-invoice") {
+    return "Invoice could not be created. Check Stripe setup or booking data.";
+  }
+
+  return "Admin action could not be completed.";
 }
 
 function withFlash(path: string, status: "saved" | "error", message?: string) {

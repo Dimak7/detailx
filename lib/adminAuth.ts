@@ -10,28 +10,64 @@ type AdminSession = {
 };
 
 const sessionDays = 7;
+const requiredAdminEnvVars = ["ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"] as const;
+
+export type AdminAuthConfigStatus = {
+  configured: boolean;
+  missing: string[];
+};
+
+export function getAdminAuthConfigStatus(): AdminAuthConfigStatus {
+  const missing = requiredAdminEnvVars.filter((key) => !process.env[key]);
+  return {
+    configured: missing.length === 0,
+    missing,
+  };
+}
 
 export async function getAdminSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(adminSessionCookie)?.value;
-  return verifyAdminSessionToken(token);
+  try {
+    const config = getAdminAuthConfigStatus();
+    if (!config.configured) {
+      console.error("Admin auth is not configured.", { missing: config.missing });
+      return null;
+    }
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get(adminSessionCookie)?.value;
+    const session = verifyAdminSessionToken(token);
+    console.info("Admin session check completed", { hasToken: Boolean(token), valid: Boolean(session) });
+    return session;
+  } catch (error) {
+    console.error("Admin session check failed safely.", { error });
+    return null;
+  }
 }
 
 export function validateAdminCredentials(email: string, password: string) {
+  const config = getAdminAuthConfigStatus();
   const expectedEmail = process.env.ADMIN_EMAIL;
-  const expectedPassword = process.env.ADMIN_PASSWORD || process.env.ADMIN_SCHEDULE_KEY;
+  const expectedPassword = process.env.ADMIN_PASSWORD;
 
-  if (!expectedEmail || !expectedPassword || !getAdminSessionSecret()) {
+  if (!config.configured || !expectedEmail || !expectedPassword) {
+    console.error("Admin login rejected because auth is not configured.", { missing: config.missing });
     return false;
   }
 
-  return email.trim().toLowerCase() === expectedEmail.trim().toLowerCase() && password === expectedPassword;
+  const valid = email.trim().toLowerCase() === expectedEmail.trim().toLowerCase() && password === expectedPassword;
+  console.info("Admin credential validation completed", { email: email.trim().toLowerCase(), valid });
+  return valid;
 }
 
 export function createAdminSessionToken(email: string) {
+  const secret = getAdminSessionSecret();
+  if (!secret) {
+    throw new Error("ADMIN_SESSION_SECRET is required to create an admin session.");
+  }
+
   const expiresAt = Date.now() + sessionDays * 24 * 60 * 60 * 1000;
   const payload = Buffer.from(JSON.stringify({ email, expiresAt } satisfies AdminSession)).toString("base64url");
-  return `${payload}.${sign(payload)}`;
+  return `${payload}.${sign(payload, secret)}`;
 }
 
 export function setAdminSessionCookie(response: NextResponse, email: string) {
@@ -75,12 +111,13 @@ export function adminUnauthorizedResponse() {
 }
 
 function verifyAdminSessionToken(token: string | undefined | null): AdminSession | null {
-  if (!token || !getAdminSessionSecret()) {
+  const secret = getAdminSessionSecret();
+  if (!token || !secret) {
     return null;
   }
 
   const [payload, signature] = token.split(".");
-  if (!payload || !signature || !safeEqual(signature, sign(payload))) {
+  if (!payload || !signature || !safeEqual(signature, sign(payload, secret))) {
     return null;
   }
 
@@ -96,12 +133,12 @@ function verifyAdminSessionToken(token: string | undefined | null): AdminSession
   }
 }
 
-function sign(payload: string) {
-  return createHmac("sha256", getAdminSessionSecret()).update(payload).digest("base64url");
+function sign(payload: string, secret: string) {
+  return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
 function getAdminSessionSecret() {
-  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_SCHEDULE_KEY || "";
+  return process.env.ADMIN_SESSION_SECRET || "";
 }
 
 function safeEqual(a: string, b: string) {

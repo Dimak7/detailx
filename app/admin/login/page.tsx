@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { getAdminAuthConfigStatus } from "@/lib/adminAuth";
 
 export default async function AdminLoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
   const params = await searchParams;
+  const config = getAdminAuthConfigStatus();
+  const errorMessage = getLoginErrorMessage(params?.error, config.missing);
 
   return (
     <main className="grid min-h-screen place-items-center bg-ink px-4 py-10 text-white">
@@ -9,7 +12,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams?: 
         <p className="text-xs font-black uppercase tracking-[0.16em] text-red">DETAILX Chicago</p>
         <h1 className="mt-3 text-4xl font-black uppercase leading-none">Admin Login</h1>
         <p className="mt-4 text-sm leading-6 text-ash">Access the internal operations portal for schedule, bookings, clients, and invoices.</p>
-        {params?.error ? <p className="mt-4 rounded-lg bg-red-soft px-4 py-3 text-sm font-black text-ink">Invalid admin credentials.</p> : null}
+        {errorMessage ? <p className="mt-4 rounded-lg bg-red-soft px-4 py-3 text-sm font-black text-ink">{errorMessage}</p> : null}
         <form className="mt-6 grid gap-4" action="/api/admin/login" method="post">
           <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-ash">
             Email
@@ -29,4 +32,20 @@ export default async function AdminLoginPage({ searchParams }: { searchParams?: 
       </section>
     </main>
   );
+}
+
+function getLoginErrorMessage(error: string | undefined, missing: string[]) {
+  if (missing.length) {
+    return `Admin login is not configured. Missing: ${missing.join(", ")}.`;
+  }
+
+  if (error === "config") {
+    return "Admin login is not configured. Check the admin environment variables.";
+  }
+
+  if (error) {
+    return "Invalid admin credentials.";
+  }
+
+  return "";
 }

@@ -1,8 +1,14 @@
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { getAdminSession } from "@/lib/adminAuth";
+import { getAdminAuthConfigStatus, getAdminSession } from "@/lib/adminAuth";
 
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
+  const config = getAdminAuthConfigStatus();
+  if (!config.configured) {
+    console.error("Protected admin route blocked because auth is not configured.", { missing: config.missing });
+    redirect("/admin/login?error=config");
+  }
+
   const session = await getAdminSession();
 
   if (!session) {

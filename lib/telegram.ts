@@ -1,7 +1,6 @@
 import type { BookingInput } from "./bookingSchema";
-import { getBookingById, updateBookingStatus, type BookingStatus } from "./bookingStore";
+import type { BookingStatus } from "./bookingStore";
 import { buildBookingEstimate } from "./pricing";
-import { sendCustomerBookingConfirmation } from "./resend";
 
 type TelegramBooking = BookingInput & { id: string; status?: BookingStatus };
 
@@ -21,9 +20,6 @@ export type TelegramActionResult = {
   ok: boolean;
   message: string;
 };
-
-const telegramActions = ["confirm", "cancel", "resend", "complete"] as const;
-type TelegramAction = (typeof telegramActions)[number];
 
 export async function sendTelegramBookingNotification(booking: TelegramBooking): Promise<TelegramNotificationStatus> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -45,7 +41,6 @@ export async function sendTelegramBookingNotification(booking: TelegramBooking):
       chat_id: chatId,
       parse_mode: "HTML",
       text: buildTelegramBookingMessage(booking),
-      reply_markup: buildTelegramKeyboard(booking.id, booking.status || "pending"),
     });
 
     console.info("Telegram booking notification sent", {
@@ -68,71 +63,8 @@ export async function handleTelegramCallbackQuery(callbackQuery: TelegramCallbac
     hasData: Boolean(callbackQuery.data),
   });
 
-  if (!isAllowedTelegramChat(callbackQuery)) {
-    await answerTelegramCallback(callbackQuery.id, "Unauthorized Telegram chat.");
-    return { ok: false, message: "Unauthorized Telegram chat." };
-  }
-
-  const parsed = parseTelegramCallbackData(callbackQuery.data || "");
-
-  if (!parsed) {
-    await answerTelegramCallback(callbackQuery.id, "Invalid booking action.");
-    return { ok: false, message: "Invalid booking action." };
-  }
-
-  try {
-    const result = await runTelegramBookingAction(parsed.bookingId, parsed.action);
-    await answerTelegramCallback(callbackQuery.id, result.message);
-    await sendTelegramActionFollowup(parsed.bookingId, result.message, callbackQuery);
-    return result;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Telegram action failed.";
-    console.error("Telegram booking action failed", {
-      bookingId: parsed.bookingId,
-      action: parsed.action,
-      error,
-    });
-    await answerTelegramCallback(callbackQuery.id, message);
-    return { ok: false, message };
-  }
-}
-
-export async function runTelegramBookingAction(bookingId: string, action: TelegramAction): Promise<TelegramActionResult> {
-  const booking = await getBookingById(bookingId);
-
-  if (!booking) {
-    return { ok: false, message: "Booking was not found." };
-  }
-
-  if (action === "resend") {
-    console.info("Telegram resend email started", { bookingId });
-    try {
-      await sendCustomerBookingConfirmation(booking);
-      console.info("Telegram resend email success", { bookingId });
-      return { ok: true, message: "Confirmation email resent successfully." };
-    } catch (error) {
-      console.error("Telegram resend email failed", { bookingId, error });
-      return { ok: false, message: "Confirmation email could not be resent." };
-    }
-  }
-
-  const nextStatus = getStatusForTelegramAction(action);
-
-  if (!nextStatus) {
-    return { ok: false, message: "Invalid booking action." };
-  }
-
-  await updateBookingStatus(bookingId, nextStatus);
-  console.info("Telegram booking status updated", {
-    bookingId,
-    action,
-    status: nextStatus,
-  });
-
-  return {
-    ok: true,
-    message: `Booking ${bookingId} marked ${nextStatus}.`,
-  };
+  await answerTelegramCallback(callbackQuery.id, "Open the DETAILX admin portal to manage bookings.");
+  return { ok: true, message: "Telegram booking management is disabled. Use /admin instead." };
 }
 
 function buildTelegramBookingMessage(booking: TelegramBooking) {
@@ -163,74 +95,13 @@ function buildTelegramBookingMessage(booking: TelegramBooking) {
     `<b>Total:</b> ${escapeTelegramHtml(booking.estimatedPrice || estimate.estimatedPrice)}`,
     `<b>Notes:</b> ${escapeTelegramHtml(notes)}`,
     `<b>Status:</b> ${formatStatus(booking.status || "pending")}`,
+    `<b>Admin:</b> ${escapeTelegramHtml(buildAdminBookingUrl(booking))}`,
   ].join("\n");
 }
 
-function buildTelegramKeyboard(bookingId: string, status: BookingStatus) {
-  if (status === "cancelled" || status === "completed") {
-    return {
-      inline_keyboard: [[button("Resend Email", "resend", bookingId)]],
-    };
-  }
-
-  if (status === "pending") {
-    return {
-      inline_keyboard: [
-        [button("Confirm Booking", "confirm", bookingId), button("Cancel Booking", "cancel", bookingId)],
-        [button("Resend Email", "resend", bookingId)],
-      ],
-    };
-  }
-
-  return {
-    inline_keyboard: [
-      [button("Cancel Booking", "cancel", bookingId)],
-      [button("Resend Email", "resend", bookingId), button("Mark Complete", "complete", bookingId)],
-    ],
-  };
-}
-
-function button(label: string, action: TelegramAction, bookingId: string) {
-  return {
-    text: label,
-    callback_data: `detailx:${action}:${bookingId}`,
-  };
-}
-
-function parseTelegramCallbackData(data: string) {
-  const [namespace, action, bookingId] = data.split(":");
-
-  if (namespace !== "detailx" || !telegramActions.includes(action as TelegramAction) || !bookingId) {
-    return null;
-  }
-
-  return {
-    action: action as TelegramAction,
-    bookingId,
-  };
-}
-
-function getStatusForTelegramAction(action: TelegramAction): BookingStatus | null {
-  if (action === "confirm") {
-    return "confirmed";
-  }
-
-  if (action === "cancel") {
-    return "cancelled";
-  }
-
-  if (action === "complete") {
-    return "completed";
-  }
-
-  return null;
-}
-
-function isAllowedTelegramChat(callbackQuery: TelegramCallbackQuery) {
-  const expectedChatId = process.env.TELEGRAM_CHAT_ID;
-  const actualChatId = callbackQuery.message?.chat?.id;
-
-  return Boolean(expectedChatId && actualChatId && String(actualChatId) === String(expectedChatId));
+function buildAdminBookingUrl(booking: TelegramBooking) {
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://detailxchicago.com").replace(/\/$/, "");
+  return `${siteUrl}/admin/bookings?search=${encodeURIComponent(booking.email)}`;
 }
 
 async function answerTelegramCallback(callbackQueryId: string, text: string) {
@@ -242,57 +113,6 @@ async function answerTelegramCallback(callbackQueryId: string, text: string) {
     });
   } catch (error) {
     console.error("Telegram answerCallbackQuery failed", error);
-  }
-}
-
-async function sendTelegramActionFollowup(bookingId: string, message: string, callbackQuery: TelegramCallbackQuery) {
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-
-  if (!chatId) {
-    return;
-  }
-
-  try {
-    const booking = await getBookingById(bookingId);
-    const statusText = [
-      "<b>DETAILX Booking Update</b>",
-      "",
-      escapeTelegramHtml(message),
-      booking ? `<b>Status:</b> ${formatStatus(booking.status)}` : "",
-    ].filter(Boolean).join("\n");
-
-    if (callbackQuery.message?.chat?.id && callbackQuery.message.message_id && booking) {
-      await updateTelegramBookingMessage(callbackQuery, booking);
-    }
-
-    await telegramApi("sendMessage", {
-      chat_id: chatId,
-      parse_mode: "HTML",
-      text: statusText,
-      reply_markup: booking ? buildTelegramKeyboard(booking.id, booking.status) : undefined,
-    });
-  } catch (error) {
-    console.error("Telegram action follow-up failed", {
-      bookingId,
-      error,
-    });
-  }
-}
-
-async function updateTelegramBookingMessage(callbackQuery: TelegramCallbackQuery, booking: TelegramBooking) {
-  try {
-    await telegramApi("editMessageText", {
-      chat_id: callbackQuery.message?.chat?.id,
-      message_id: callbackQuery.message?.message_id,
-      parse_mode: "HTML",
-      text: buildTelegramBookingMessage(booking),
-      reply_markup: buildTelegramKeyboard(booking.id, booking.status || "pending"),
-    });
-  } catch (error) {
-    console.error("Telegram original message update failed", {
-      bookingId: booking.id,
-      error,
-    });
   }
 }
 

@@ -19,7 +19,15 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 ```text
 .
 |-- app/
-|   |-- admin/schedule/page.tsx
+|   |-- admin/(portal)/dashboard/page.tsx
+|   |-- admin/(portal)/schedule/page.tsx
+|   |-- admin/(portal)/bookings/page.tsx
+|   |-- admin/(portal)/clients/page.tsx
+|   |-- admin/(portal)/invoices/page.tsx
+|   |-- admin/(portal)/promotions/page.tsx
+|   |-- admin/(portal)/settings/page.tsx
+|   |-- admin/login/page.tsx
+|   |-- admin/page.tsx
 |   |-- api/admin/schedule/route.ts
 |   |-- api/availability/route.ts
 |   |-- api/bookings/route.ts
@@ -27,14 +35,17 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 |   |-- layout.tsx
 |   `-- page.tsx
 |-- components/
+|   |-- admin/AdminShell.tsx
 |   |-- Nav.tsx
 |   `-- booking/BookingForm.tsx
 |-- data/
 |   `-- .gitkeep
 |-- lib/
 |   |-- adminAuth.ts
+|   |-- adminData.ts
 |   |-- bookingSchema.ts
 |   |-- bookingStore.ts
+|   |-- invoiceStore.ts
 |   |-- notifications.ts
 |   |-- pricing.ts
 |   |-- resend.ts
@@ -104,19 +115,41 @@ The customer form loads open times from `GET /api/availability?date=YYYY-MM-DD`.
 
 Double-booking is prevented on the server in `lib/bookingStore.ts`. In PostgreSQL, booking save runs inside a transaction, takes a slot-specific advisory lock, checks active bookings and blocked slots for the selected date/time, and only then inserts the booking. If two customers race for the same slot, the second request receives a clear unavailable-slot response. Local JSON fallback also checks availability before saving, but PostgreSQL is recommended for production.
 
+## Admin portal
+
+The internal operations portal lives inside the same Next.js app under:
+
+```text
+/admin
+/admin/dashboard
+/admin/schedule
+/admin/bookings
+/admin/clients
+/admin/invoices
+/admin/promotions
+/admin/settings
+/admin/login
+```
+
+It uses the same booking database/store as the public site, so public website bookings appear in admin automatically.
+
+Set these variables for protected admin login:
+
+```bash
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+ADMIN_SESSION_SECRET=
+```
+
+`ADMIN_SESSION_SECRET` signs the HTTP-only admin session cookie. `ADMIN_SCHEDULE_KEY` remains as a legacy API fallback for the schedule JSON route, but the main portal uses the `/admin/login` session.
+
 Admin schedule management lives at:
 
 ```text
 /admin/schedule
 ```
 
-Set this environment variable before using it:
-
-```bash
-ADMIN_SCHEDULE_KEY=
-```
-
-Use a long private value. The admin page sends it as an `x-admin-key` header to the protected `POST/GET/PATCH/DELETE /api/admin/schedule` route. Admin tools can view bookings by date, block a slot, remove a block, and update booking status to `pending`, `confirmed`, `cancelled`, or `completed`.
+Admin tools can view bookings by date, block a slot, remove a block, reschedule active bookings, resend confirmations, create invoices, and update booking status to `pending`, `confirmed`, `cancelled`, or `completed`.
 
 If `DATABASE_URL` is set, bookings are stored in PostgreSQL. The app creates this table automatically if it does not exist:
 
@@ -146,6 +179,19 @@ CREATE TABLE IF NOT EXISTS schedule_blocks (
   status text NOT NULL DEFAULT 'blocked',
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id uuid PRIMARY KEY,
+  booking_id uuid NOT NULL,
+  customer_name text NOT NULL,
+  customer_email text NOT NULL,
+  amount integer NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  payment_url text,
+  stripe_session_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 ```
 
 If `DATABASE_URL` is not set, bookings are stored locally in `data/bookings.json`. That file is ignored by Git.
@@ -173,16 +219,19 @@ TELEGRAM_CHAT_ID=
 TELEGRAM_WEBHOOK_SECRET=
 ```
 
-Telegram runs only from server routes. Booking notifications send after a booking is saved, and failures are logged server-side without blocking the customer. Inline button actions are handled by `POST /api/telegram`; configure the Telegram webhook to point to your deployed URL and set Telegram's webhook secret token to `TELEGRAM_WEBHOOK_SECRET`.
+Telegram runs only from server routes. Booking notifications send after a booking is saved, and failures are logged server-side without blocking the customer. For this phase, Telegram is notification-only; booking management happens inside `/admin`. New Telegram alerts include an admin booking link.
 
-Telegram booking actions support:
+`POST /api/telegram` remains available for old callback messages and replies that booking management has moved to `/admin`, but new booking notifications do not include management buttons.
 
-- confirm booking
-- cancel booking
-- resend confirmation email
-- mark complete
+## Stripe invoices
 
-Cancelling changes booking status to `cancelled`, which releases the time slot because only `pending` and `confirmed` bookings block availability.
+Admin invoices use Stripe-hosted Checkout payment links when this variable is set:
+
+```bash
+STRIPE_SECRET_KEY=
+```
+
+Open `/admin/bookings`, click `Create Invoice`, and the server creates a Stripe Checkout payment link from the saved booking data. The invoice record is stored in PostgreSQL when `DATABASE_URL` is set, or in `data/invoices.json` for local development. Payment status can be updated in `/admin/invoices`; webhook-driven automatic status sync is the next recommended production step.
 
 ## SMS confirmations
 

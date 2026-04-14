@@ -49,6 +49,37 @@ export async function sendBusinessBookingNotification(booking: BookingEmail) {
   });
 }
 
+export async function sendInvoicePaymentEmail(invoice: {
+  customerEmail: string;
+  customerName: string;
+  amount: number;
+  paymentUrl: string;
+}) {
+  await sendEmail({
+    label: "customer-invoice-payment-link",
+    to: invoice.customerEmail,
+    subject: "Your DETAILX Chicago Invoice",
+    html: `
+      <div style="margin:0;background:#f1f1ee;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.5">
+        <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+          <div style="background:#050506;color:#ffffff;padding:28px 26px">
+            <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.16em;text-transform:uppercase">DETAILX Chicago</p>
+            <h1 style="margin:12px 0 0;font-size:32px;line-height:1;text-transform:uppercase">Invoice Ready</h1>
+            <p style="margin:12px 0 0;color:#c7c9c7;font-size:16px">Hi ${escapeHtml(invoice.customerName)}, your secure payment link is ready.</p>
+          </div>
+          <div style="padding:24px;text-align:center">
+            <p style="margin:0;color:#73777c;font-size:12px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase">Amount due</p>
+            <p style="margin:8px 0 22px;color:#050506;font-size:34px;font-weight:900">$${invoice.amount.toLocaleString("en-US")}</p>
+            <a href="${escapeHtml(invoice.paymentUrl)}" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:13px;font-weight:900;letter-spacing:0.06em;text-decoration:none;text-transform:uppercase;padding:15px 22px">Pay Securely</a>
+          </div>
+          <div style="background:#050506;padding:18px 26px;color:#c7c9c7;font-size:13px">DETAILX Chicago / Premium Mobile Detailing in Chicago</div>
+        </div>
+      </div>
+    `,
+    replyTo: getBusinessEmail(),
+  });
+}
+
 async function sendEmail(message: {
   label: string;
   to: string;

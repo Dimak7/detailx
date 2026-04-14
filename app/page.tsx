@@ -151,8 +151,8 @@ function Difference() {
       <div className="content-shell grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="relative min-h-[560px] overflow-hidden rounded-lg bg-ink">
           <Image
-            src="/brand/detailx-work/matte-green-bmw.jpg"
-            alt="Matte green BMW after DETAILX Chicago detailing"
+            src="/brand/detailx-work/white-bmw-interior.jpg"
+            alt="BMW interior after DETAILX Chicago detailing"
             fill
             className="object-cover opacity-[0.88]"
             sizes="(min-width: 1024px) 50vw, 100vw"

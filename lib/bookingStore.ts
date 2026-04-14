@@ -5,7 +5,7 @@ import { Pool } from "pg";
 import type { BookingInput } from "./bookingSchema";
 import { isTimeSlot, timeSlots, type SlotAvailability, type TimeSlot } from "./schedule";
 
-type StoredBooking = BookingInput & {
+export type StoredBooking = BookingInput & {
   id: string;
   createdAt: string;
   status: BookingStatus;
@@ -128,6 +128,56 @@ export async function listBookingsByDate(date: string) {
   return (await readLocalBookings())
     .filter((booking) => booking.date === date)
     .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+export async function listBookings(filters: { date?: string; status?: BookingStatus | "all"; service?: string; search?: string } = {}) {
+  const db = getPool();
+  const clauses: string[] = [];
+  const values: string[] = [];
+
+  if (filters.date) {
+    values.push(filters.date);
+    clauses.push(`booking_date = $${values.length}`);
+  }
+
+  if (filters.status && filters.status !== "all") {
+    values.push(filters.status);
+    clauses.push(`status = $${values.length}`);
+  }
+
+  if (filters.service && filters.service !== "all") {
+    values.push(filters.service);
+    clauses.push(`service = $${values.length}`);
+  }
+
+  if (filters.search) {
+    values.push(`%${filters.search}%`);
+    clauses.push(`(name ILIKE $${values.length} OR email ILIKE $${values.length} OR phone ILIKE $${values.length})`);
+  }
+
+  if (db) {
+    await ensureSchema(db);
+    const result = await db.query<DatabaseBookingRow>(
+      `SELECT id, service, booking_date, booking_time, name, phone, email, vehicle_type, address,
+        estimated_price, notes, details_json, status, created_at
+       FROM bookings
+       ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+       ORDER BY booking_date DESC, booking_time ASC, created_at DESC
+       LIMIT 500`,
+      values
+    );
+
+    return result.rows.map(mapDatabaseBooking);
+  }
+
+  const search = filters.search?.toLowerCase() || "";
+  return (await readLocalBookings())
+    .filter((booking) => !filters.date || booking.date === filters.date)
+    .filter((booking) => !filters.status || filters.status === "all" || booking.status === filters.status)
+    .filter((booking) => !filters.service || filters.service === "all" || booking.service === filters.service)
+    .filter((booking) => !search || [booking.name, booking.email, booking.phone].some((value) => value.toLowerCase().includes(search)))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.time.localeCompare(b.time))
+    .slice(0, 500);
 }
 
 export async function getBookingById(id: string) {
@@ -330,6 +380,74 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
   }
 
   await writeLocalBookings(bookings.map((booking) => booking.id === id ? { ...booking, status } : booking));
+}
+
+export async function updateBookingSchedule(id: string, input: { date: string; time: string }) {
+  if (!isTimeSlot(input.time)) {
+    throw new Error("Choose a valid time slot.");
+  }
+
+  const db = getPool();
+
+  if (db) {
+    await ensureSchema(db);
+    await db.query("BEGIN");
+    try {
+      const current = await db.query<{ status: string | null }>("SELECT status FROM bookings WHERE id = $1 LIMIT 1", [id]);
+      const booking = current.rows[0];
+
+      if (!booking) {
+        throw new Error("Booking was not found.");
+      }
+
+      if (!isActiveBookingStatus(normalizeBookingStatus(booking.status))) {
+        throw new Error("Only pending or confirmed bookings can be rescheduled.");
+      }
+
+      await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${input.date}:${input.time}`]);
+      const conflict = await db.query(
+        "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND id <> $3 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
+        [input.date, input.time, id]
+      );
+      const block = await db.query(
+        "SELECT 1 FROM schedule_blocks WHERE block_date = $1 AND block_time = $2 AND status = 'blocked' LIMIT 1",
+        [input.date, input.time]
+      );
+
+      if (conflict.rowCount || block.rowCount) {
+        throw new Error("That slot is not available.");
+      }
+
+      await db.query("UPDATE bookings SET booking_date = $2, booking_time = $3 WHERE id = $1", [id, input.date, input.time]);
+      await db.query("COMMIT");
+      return;
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  }
+
+  const bookings = await readLocalBookings();
+  const target = bookings.find((booking) => booking.id === id);
+
+  if (!target) {
+    throw new Error("Booking was not found.");
+  }
+
+  if (!isActiveBookingStatus(target.status)) {
+    throw new Error("Only pending or confirmed bookings can be rescheduled.");
+  }
+
+  const blocks = await readLocalBlocks();
+  const conflict =
+    bookings.some((booking) => booking.id !== id && booking.date === input.date && booking.time === input.time && isActiveBookingStatus(booking.status)) ||
+    blocks.some((block) => block.date === input.date && block.time === input.time);
+
+  if (conflict) {
+    throw new Error("That slot is not available.");
+  }
+
+  await writeLocalBookings(bookings.map((booking) => booking.id === id ? { ...booking, date: input.date, time: input.time as TimeSlot } : booking));
 }
 
 async function saveToDatabase(db: Pool, storedBooking: StoredBooking) {

@@ -99,6 +99,23 @@ body {
   box-shadow: 0 24px 70px rgba(12, 13, 11, 0.18);
 }
 
+.admin-input {
+  min-height: 48px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(5, 5, 6, 0.12);
+  background: #ffffff;
+  padding: 0.75rem 0.9rem;
+  color: var(--ink);
+  font-weight: 700;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 4px rgba(193, 18, 31, 0.16);
+}
+
 .testimonial-track {
   animation: testimonial-slide 34s linear infinite;
 }

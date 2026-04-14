@@ -203,31 +203,31 @@ export function BookingForm() {
 
   return (
     <>
-      <form ref={formRef} className="rounded-lg bg-white p-3 text-ink shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-5" onSubmit={submitBooking}>
+      <form ref={formRef} className="min-w-0 max-w-full overflow-hidden rounded-lg bg-white p-3 text-ink shadow-[0_28px_90px_rgba(5,5,6,0.3)] ring-1 ring-white/20 backdrop-blur md:p-5" onSubmit={submitBooking}>
       <input name="service" type="hidden" value={primaryDetail.service} />
       <input name="vehicleType" type="hidden" value={selectedVehicle} />
       <input name="estimatedPrice" type="hidden" value={estimatedPrice} />
 
       <div className="rounded-lg bg-ink p-4 text-white">
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-          <div>
+        <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Reservation</p>
             <h3 className="mt-2 text-2xl font-black uppercase leading-none">Build your detail.</h3>
           </div>
-          <div className="rounded-lg bg-white px-4 py-3 text-right text-ink">
+          <div className="min-w-0 rounded-lg bg-white px-4 py-3 text-right text-ink">
             <p className="text-[11px] font-black uppercase tracking-[0.12em] text-steel">{totalDetails} detail{totalDetails === 1 ? "" : "s"}</p>
             <p className="text-2xl font-black leading-none">{estimatedPrice}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {pricedServices.map((service) => {
           const count = serviceCounts[service.title];
           const active = count > 0;
           return (
             <article
-              className={`group overflow-hidden rounded-lg border text-left transition ${active ? "border-red bg-ink text-white shadow-[0_18px_48px_rgba(193,18,31,0.2)]" : "border-ink/10 bg-smoke text-ink hover:border-red/40"}`}
+              className={`group min-w-0 overflow-hidden rounded-lg border text-left transition ${active ? "border-red bg-ink text-white shadow-[0_18px_48px_rgba(193,18,31,0.2)]" : "border-ink/10 bg-smoke text-ink hover:border-red/40"}`}
               key={service.title}
             >
               <div className="relative h-28 overflow-hidden">
@@ -276,12 +276,12 @@ export function BookingForm() {
         <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Booking summary</p>
         <div className="mt-3 grid gap-2">
           {bookingEstimate.details.map((detail) => (
-            <div className="flex items-start justify-between gap-4 rounded-lg bg-white px-4 py-3" key={detail.lineNumber}>
-              <div>
+            <div className="flex min-w-0 items-start justify-between gap-4 rounded-lg bg-white px-4 py-3" key={detail.lineNumber}>
+              <div className="min-w-0">
                 <p className="font-black uppercase leading-tight">Detail {detail.lineNumber}: {detail.service}</p>
                 <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}{detail.discountPercent ? ` / ${detail.discountPercent}% off` : ""}</p>
               </div>
-              <p className="text-right font-black text-ink">{detail.estimatedPrice}</p>
+              <p className="shrink-0 text-right font-black text-ink">{detail.estimatedPrice}</p>
             </div>
           ))}
         </div>
@@ -326,8 +326,8 @@ export function BookingForm() {
             {selectedTime || (selectedDate ? "Select a time" : "Choose date first")}
           </p>
         </div>
-        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-1">
-          <div className="flex w-max gap-2 pr-2">
+        <div className="mt-3 max-w-full overflow-x-auto overscroll-x-contain pb-1">
+          <div className="inline-flex max-w-none gap-2 pr-2">
           {timeSlots.map((time) => {
             const slot = availableSlotByTime.get(time);
             const disabled = !selectedDate || availabilityLoading || Boolean(availabilityError) || !slot || !slot.available;

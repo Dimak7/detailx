@@ -261,8 +261,8 @@ function Testimonials() {
 function Booking() {
   return (
     <section className="section-pad bg-[linear-gradient(135deg,var(--ink),var(--charcoal))] text-white" id="booking">
-      <div className="content-shell grid gap-10 lg:grid-cols-[0.78fr_1.22fr]">
-        <div>
+      <div className="content-shell grid min-w-0 gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
+        <div className="min-w-0">
           <div className="mb-5 inline-flex rounded-lg border border-red/45 bg-red/15 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-soft">
             Add another detail - get 10% off
           </div>

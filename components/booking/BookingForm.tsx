@@ -319,27 +319,37 @@ export function BookingForm() {
         </div>
       </div>
 
-      <div className="mt-4 rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
-        <label className="form-label">
-          Preferred time
-          <select
-            className="field"
-            disabled={!selectedDate || availabilityLoading || Boolean(availabilityError)}
-            onChange={(event) => setSelectedTime(event.target.value)}
-            value={selectedTime}
-          >
-            <option value="">{selectedDate ? "Choose an available time" : "Choose a date first"}</option>
-            {timeSlots.map((time) => {
-              const slot = availableSlotByTime.get(time);
-              const disabled = !slot || !slot.available;
-              return (
-                <option disabled={disabled} key={time} value={time}>
-                  {time}{slot && !slot.available ? ` - ${slot.reason}` : ""}
-                </option>
-              );
-            })}
-          </select>
-        </label>
+      <div className="mt-4 overflow-hidden rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Preferred time</p>
+          <p className="rounded-lg bg-white px-3 py-2 text-xs font-black uppercase text-ink ring-1 ring-ink/10">
+            {selectedTime || (selectedDate ? "Select a time" : "Choose date first")}
+          </p>
+        </div>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {timeSlots.map((time) => {
+            const slot = availableSlotByTime.get(time);
+            const disabled = !selectedDate || availabilityLoading || Boolean(availabilityError) || !slot || !slot.available;
+            return (
+              <button
+                className={`shrink-0 rounded-lg px-4 py-3 text-sm font-black uppercase transition ${
+                  selectedTime === time
+                    ? "bg-red text-white shadow-[0_12px_30px_rgba(193,18,31,0.24)]"
+                    : disabled
+                      ? "bg-white text-steel opacity-45"
+                      : "bg-white text-ink ring-1 ring-ink/10 hover:bg-red-soft hover:ring-red/30"
+                }`}
+                disabled={disabled}
+                key={time}
+                onClick={() => setSelectedTime(time)}
+                type="button"
+              >
+                {time}
+                {slot && !slot.available ? <span className="ml-2 text-[10px]">{slot.reason}</span> : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
       {selectedDate && !availabilityLoading && !availabilityError && availability.length > 0 && availability.every((slot) => !slot.available) ? (
         <p className="mt-3 rounded-lg bg-red-soft px-4 py-3 text-sm font-bold text-ink">No slots are open for this date. Please choose another day.</p>

@@ -319,20 +319,21 @@ export function BookingForm() {
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
-        <div className="flex items-center justify-between gap-4">
+      <div className="mt-4 min-w-0 max-w-full overflow-hidden rounded-lg bg-smoke p-3 ring-1 ring-ink/10 sm:p-4">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Preferred time</p>
-          <p className="rounded-lg bg-white px-3 py-2 text-xs font-black uppercase text-ink ring-1 ring-ink/10">
+          <p className="w-fit max-w-full rounded-lg bg-white px-3 py-2 text-xs font-black uppercase text-ink ring-1 ring-ink/10">
             {selectedTime || (selectedDate ? "Select a time" : "Choose date first")}
           </p>
         </div>
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-1">
+          <div className="flex w-max gap-2 pr-2">
           {timeSlots.map((time) => {
             const slot = availableSlotByTime.get(time);
             const disabled = !selectedDate || availabilityLoading || Boolean(availabilityError) || !slot || !slot.available;
             return (
               <button
-                className={`shrink-0 rounded-lg px-4 py-3 text-sm font-black uppercase transition ${
+                className={`shrink-0 rounded-lg px-3.5 py-3 text-xs font-black uppercase transition sm:px-4 sm:text-sm ${
                   selectedTime === time
                     ? "bg-red text-white shadow-[0_12px_30px_rgba(193,18,31,0.24)]"
                     : disabled
@@ -349,6 +350,7 @@ export function BookingForm() {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
       {selectedDate && !availabilityLoading && !availabilityError && availability.length > 0 && availability.every((slot) => !slot.available) ? (

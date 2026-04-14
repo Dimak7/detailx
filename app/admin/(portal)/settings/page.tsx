@@ -2,6 +2,8 @@ import { AdminPageHeader } from "@/components/admin/AdminShell";
 import { pricedServices } from "@/lib/pricing";
 import { timeSlots } from "@/lib/schedule";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminSettingsPage() {
   return (
     <>

@@ -2,6 +2,8 @@ import { AdminPageHeader, FlashMessage } from "@/components/admin/AdminShell";
 import { buildAdminClients, formatMoney } from "@/lib/adminData";
 import { listBookings } from "@/lib/bookingStore";
 
+export const dynamic = "force-dynamic";
+
 const promotionTemplates = [
   {
     label: "10% off",

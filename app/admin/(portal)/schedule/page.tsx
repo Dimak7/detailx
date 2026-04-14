@@ -5,6 +5,8 @@ import { getBookingDetails, addDays, getDateString } from "@/lib/adminData";
 import { getAvailability, listBookingsByDate, listScheduleBlocks } from "@/lib/bookingStore";
 import { timeSlots } from "@/lib/schedule";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminSchedulePage({ searchParams }: { searchParams?: Promise<{ date?: string; view?: string; adminStatus?: string; adminMessage?: string }> }) {
   const params = await searchParams;
   const date = params?.date || getDateString(new Date());

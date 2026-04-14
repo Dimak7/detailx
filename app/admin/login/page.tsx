@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getAdminAuthConfigStatus } from "@/lib/adminAuth";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
   const params = await searchParams;
   const config = getAdminAuthConfigStatus();

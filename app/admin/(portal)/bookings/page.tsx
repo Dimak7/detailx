@@ -4,6 +4,8 @@ import { listBookings, type BookingStatus } from "@/lib/bookingStore";
 import { pricedServices } from "@/lib/pricing";
 import { timeSlots } from "@/lib/schedule";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminBookingsPage({ searchParams }: { searchParams?: Promise<{ date?: string; status?: BookingStatus | "all"; service?: string; search?: string; adminStatus?: string; adminMessage?: string }> }) {
   const params = await searchParams;
   const bookings = await listBookings({

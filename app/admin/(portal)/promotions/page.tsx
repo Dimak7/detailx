@@ -2,6 +2,8 @@ import { AdminPageHeader } from "@/components/admin/AdminShell";
 import { buildAdminClients } from "@/lib/adminData";
 import { listBookings } from "@/lib/bookingStore";
 
+export const dynamic = "force-dynamic";
+
 const segments = ["No booking in 60 days", "Repeat customer", "Tint lead", "Ceramic lead"];
 
 export default async function AdminPromotionsPage() {

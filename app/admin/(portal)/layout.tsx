@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { getAdminAuthConfigStatus, getAdminSession } from "@/lib/adminAuth";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   const config = getAdminAuthConfigStatus();
   if (!config.configured) {

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getAdminAuthConfigStatus, getAdminSession } from "@/lib/adminAuth";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminIndexPage() {
   const config = getAdminAuthConfigStatus();
   if (!config.configured) {

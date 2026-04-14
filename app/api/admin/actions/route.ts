@@ -6,6 +6,7 @@ import { sendClientPromotionEmail, sendCustomerBookingConfirmation } from "@/lib
 import { createStripeInvoiceForBooking, updateInvoiceStatus, type InvoiceStatus } from "@/lib/invoiceStore";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const bookingStatuses = ["pending", "confirmed", "cancelled", "completed"] as const;
 const invoiceStatuses = ["draft", "sent", "paid", "overdue", "cancelled"] as const;

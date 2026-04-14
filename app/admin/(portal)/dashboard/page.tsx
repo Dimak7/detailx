@@ -5,6 +5,8 @@ import { listBookings } from "@/lib/bookingStore";
 import { getBusinessMetricsSettings } from "@/lib/businessMetricsStore";
 import { listInvoices } from "@/lib/invoiceStore";
 
+export const dynamic = "force-dynamic";
+
 const timelineOptions = [7, 30, 60, 90] as const;
 
 export default async function AdminDashboardPage({ searchParams }: { searchParams?: Promise<{ adminStatus?: string; adminMessage?: string; range?: string }> }) {

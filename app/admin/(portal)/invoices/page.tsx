@@ -3,6 +3,8 @@ import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/A
 import { formatMoney } from "@/lib/adminData";
 import { listInvoices } from "@/lib/invoiceStore";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminInvoicesPage({ searchParams }: { searchParams?: Promise<{ adminStatus?: string; adminMessage?: string; payment?: string }> }) {
   const params = await searchParams;
   const invoices = await listInvoices();

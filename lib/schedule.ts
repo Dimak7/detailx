@@ -13,6 +13,7 @@ export const timeSlots = [
   "5:00 PM",
   "6:00 PM",
   "7:00 PM",
+  "8:00 PM",
 ] as const;
 
 export type TimeSlot = (typeof timeSlots)[number];

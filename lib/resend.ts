@@ -80,6 +80,38 @@ export async function sendInvoicePaymentEmail(invoice: {
   });
 }
 
+export async function sendClientPromotionEmail(input: {
+  to: string;
+  name: string;
+  subject: string;
+  message: string;
+}) {
+  await sendEmail({
+    label: "client-promotion-email",
+    to: input.to,
+    subject: input.subject,
+    html: `
+      <div style="margin:0;background:#f1f1ee;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;color:#050506;line-height:1.5">
+        <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e4e4df;border-radius:8px;overflow:hidden">
+          <div style="background:#050506;color:#ffffff;padding:28px 26px">
+            <p style="margin:0;color:#c1121f;font-size:12px;font-weight:900;letter-spacing:0.16em;text-transform:uppercase">DETAILX Chicago</p>
+            <h1 style="margin:12px 0 0;font-size:30px;line-height:1;text-transform:uppercase">${escapeHtml(input.subject)}</h1>
+          </div>
+          <div style="padding:24px">
+            <p style="margin:0 0 16px;font-size:16px;font-weight:800">Hi ${escapeHtml(input.name)},</p>
+            <div style="color:#333842;font-size:16px;line-height:1.7">${formatEmailMessage(input.message)}</div>
+            <div style="margin-top:24px;text-align:center">
+              <a href="https://detailxchicago.com/#booking" style="display:inline-block;border-radius:8px;background:#c1121f;color:#ffffff;font-size:13px;font-weight:900;letter-spacing:0.06em;text-decoration:none;text-transform:uppercase;padding:15px 22px">Book Detail</a>
+            </div>
+          </div>
+          <div style="background:#050506;padding:18px 26px;color:#c7c9c7;font-size:13px">DETAILX Chicago / Premium Mobile Detailing in Chicago</div>
+        </div>
+      </div>
+    `,
+    replyTo: getBusinessEmail(),
+  });
+}
+
 async function sendEmail(message: {
   label: string;
   to: string;
@@ -295,4 +327,12 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function formatEmailMessage(value: string) {
+  return escapeHtml(value)
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .map((line) => `<p style="margin:0 0 12px">${line}</p>`)
+    .join("");
 }

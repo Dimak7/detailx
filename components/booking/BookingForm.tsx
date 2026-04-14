@@ -319,7 +319,7 @@ export function BookingForm() {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-5">
+      <div className="mt-4 grid gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
         {timeSlots.map((time) => {
           const slot = availableSlotByTime.get(time);
           const disabled = !selectedDate || availabilityLoading || Boolean(availabilityError) || !slot || !slot.available;

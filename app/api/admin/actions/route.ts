@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminUnauthorizedResponse, isAdminRequest } from "@/lib/adminAuth";
 import { getBookingById, updateBookingSchedule, updateBookingStatus, createScheduleBlock, deleteScheduleBlock, type BookingStatus } from "@/lib/bookingStore";
-import { sendCustomerBookingConfirmation } from "@/lib/resend";
+import { sendClientPromotionEmail, sendCustomerBookingConfirmation } from "@/lib/resend";
 import { createStripeInvoiceForBooking, updateInvoiceStatus, type InvoiceStatus } from "@/lib/invoiceStore";
 
 export const runtime = "nodejs";
@@ -79,32 +79,73 @@ export async function POST(request: Request) {
 
     if (action === "update-invoice-status") {
       handled = true;
+      console.info("Admin invoice status action started", { invoiceId: String(formData.get("invoiceId") || "") });
       const status = String(formData.get("status") || "") as InvoiceStatus;
       if (!invoiceStatuses.includes(status)) {
         throw new Error("Choose a valid invoice status.");
       }
       await updateInvoiceStatus(String(formData.get("invoiceId") || ""), status);
+      console.info("Admin invoice status action completed", { invoiceId: String(formData.get("invoiceId") || ""), status });
+      adminMessage = "Invoice status updated.";
+    }
+
+    if (action === "send-client-promotion") {
+      handled = true;
+      const to = String(formData.get("email") || "").trim();
+      const name = String(formData.get("name") || "").trim();
+      const subject = String(formData.get("subject") || "").trim();
+      const message = String(formData.get("message") || "").trim();
+      console.info("Admin client promotion email started", { to, hasSubject: Boolean(subject), hasMessage: Boolean(message) });
+
+      if (!to || !name || !subject || !message) {
+        throw new Error("Client email, name, subject, and message are required.");
+      }
+
+      await sendClientPromotionEmail({ to, name, subject, message });
+      console.info("Admin client promotion email sent", { to });
+      adminMessage = "Client email sent.";
     }
 
     if (!handled) {
       throw new Error("Choose an admin action.");
     }
 
-    return NextResponse.redirect(new URL(withFlash(returnTo, "saved", adminMessage), request.url), { status: 303 });
+    const redirectUrl = new URL(withFlash(returnTo, "saved", adminMessage), request.url);
+    console.info("Admin action final response returned", { action, redirectTo: `${redirectUrl.pathname}${redirectUrl.search}` });
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   } catch (error) {
     console.error("Admin action failed", { action, error });
     const errorMessage = error instanceof Error && error.message
       ? error.message
       : "Invoice could not be created. Check Stripe setup or booking data.";
-    return NextResponse.redirect(new URL(withFlash(returnTo, "error", errorMessage), request.url), { status: 303 });
+    const redirectUrl = new URL(withFlash(returnTo, "error", errorMessage), request.url);
+    console.info("Admin action final response returned", { action, redirectTo: `${redirectUrl.pathname}${redirectUrl.search}`, failed: true });
+    return NextResponse.redirect(redirectUrl, { status: 303 });
   }
 }
 
 function withFlash(path: string, status: "saved" | "error", message?: string) {
-  const url = new URL(path.startsWith("http") ? path : `https://detailxchicago.com${path}`);
+  const url = new URL(sanitizeReturnPath(path), "https://detailxchicago.com");
   url.searchParams.set("adminStatus", status);
   if (message) {
     url.searchParams.set("adminMessage", message);
   }
   return `${url.pathname}${url.search}`;
+}
+
+function sanitizeReturnPath(path: string) {
+  if (!path) {
+    return "/admin/dashboard";
+  }
+
+  try {
+    const url = new URL(path, "https://detailxchicago.com");
+    if (!url.pathname.startsWith("/admin")) {
+      return "/admin/dashboard";
+    }
+
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return "/admin/dashboard";
+  }
 }

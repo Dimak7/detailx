@@ -143,6 +143,7 @@ export async function createStripeInvoiceForBooking(booking: StoredBooking): Pro
     });
 
     try {
+      console.info("Invoice payment email send started", { bookingId: booking.id, invoiceId: invoice.id });
       await sendInvoicePaymentEmail(invoice);
       console.info("Invoice payment email sent", { bookingId: booking.id, invoiceId: invoice.id });
     } catch (error) {

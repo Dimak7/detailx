@@ -22,7 +22,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     ["Total revenue", formatMoney(analytics.revenue)],
     ["Total clients", analytics.totalClients],
     ["Profit", formatMoney(analytics.profit)],
-    ["Marketing", formatMoney(analytics.marketingExpense)],
+    ["Unpaid invoices", unpaidInvoices.length],
   ];
 
   return (
@@ -64,31 +64,17 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           ))}
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_280px]">
-          <div className="rounded-lg bg-ink p-4 text-white">
+        <div className="mt-5 rounded-lg bg-ink p-4 text-white">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Revenue trend</p>
               <h3 className="mt-2 text-2xl font-black uppercase leading-none">Daily revenue</h3>
             </div>
-            <div className="mt-4 overflow-hidden rounded-lg bg-white/[0.06] p-2">
-              <RevenueChart series={analytics.series} />
-            </div>
+            <p className="text-sm font-bold text-ash">Profit is revenue minus saved marketing expense.</p>
           </div>
-
-          <aside className="rounded-lg bg-smoke p-4 ring-1 ring-ink/5">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Inputs</p>
-            <h3 className="mt-2 text-xl font-black uppercase leading-none">Expense control</h3>
-            <p className="mt-2 text-sm font-bold leading-6 text-steel">Profit is revenue minus marketing for this first dashboard version.</p>
-            <form className="mt-4 grid gap-3" action="/api/admin/actions" method="post">
-              <input type="hidden" name="action" value="update-business-metrics" />
-              <input type="hidden" name="returnTo" value={`/admin/dashboard?range=${days}`} />
-              <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-steel">
-                Marketing expense
-                <input className="admin-input bg-white" name="marketingExpense" type="number" min="0" step="1" defaultValue={analytics.marketingExpense} aria-label="Marketing expense" />
-              </label>
-              <button className="rounded-lg bg-red px-4 py-3 text-sm font-black uppercase text-white" type="submit">Save input</button>
-            </form>
-          </aside>
+          <div className="mt-4 overflow-hidden rounded-lg bg-white/[0.06] p-2">
+            <RevenueChart series={analytics.series} />
+          </div>
         </div>
       </section>
 

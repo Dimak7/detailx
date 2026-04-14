@@ -21,6 +21,8 @@ export async function POST(request: Request) {
   const returnTo = String(formData.get("returnTo") || "/admin/dashboard");
   let handled = false;
   let adminMessage = "Admin update saved.";
+  let adminData: Record<string, string> = {};
+  const jsonResponse = wantsJsonResponse(request);
 
   try {
     if (action === "update-booking-status") {
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
       }
       console.info("Admin invoice action completed", { bookingId, invoiceId: invoiceResult.invoice.id, paymentUrl: invoiceResult.paymentUrl });
       adminMessage = "Invoice created. Payment link is ready.";
+      adminData = { invoiceId: invoiceResult.invoice.id, paymentUrl: invoiceResult.paymentUrl };
     }
 
     if (action === "update-invoice-status") {
@@ -157,6 +160,10 @@ export async function POST(request: Request) {
 
     const redirectUrl = new URL(withFlash(returnTo, "saved", adminMessage), request.url);
     console.info("Admin action final response returned", { action, redirectTo: `${redirectUrl.pathname}${redirectUrl.search}` });
+    if (jsonResponse) {
+      return NextResponse.json({ success: true, message: adminMessage, ...adminData });
+    }
+
     return NextResponse.redirect(redirectUrl, { status: 303 });
   } catch (error) {
     console.error("Admin action failed", { action, error });
@@ -165,8 +172,16 @@ export async function POST(request: Request) {
       : getDefaultAdminActionError(action);
     const redirectUrl = new URL(withFlash(returnTo, "error", errorMessage), request.url);
     console.info("Admin action final response returned", { action, redirectTo: `${redirectUrl.pathname}${redirectUrl.search}`, failed: true });
+    if (jsonResponse) {
+      return NextResponse.json({ success: false, error: errorMessage });
+    }
+
     return NextResponse.redirect(redirectUrl, { status: 303 });
   }
+}
+
+function wantsJsonResponse(request: Request) {
+  return request.headers.get("accept")?.includes("application/json") || request.headers.get("x-admin-action") === "fetch";
 }
 
 function isEmailAddress(value: string) {

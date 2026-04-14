@@ -1,4 +1,5 @@
 import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
+import { InvoiceCreateButton } from "@/components/admin/InvoiceCreateButton";
 import { getBookingDetails } from "@/lib/adminData";
 import { listBookings, type BookingStatus } from "@/lib/bookingStore";
 import { pricedServices } from "@/lib/pricing";
@@ -103,12 +104,7 @@ function AdminActionForm({ bookingId, returnTo }: { bookingId: string; returnTo:
         <input type="hidden" name="returnTo" value={returnTo} />
         <button className="w-full rounded-lg border border-ink/10 bg-white px-4 py-3 text-sm font-black uppercase" type="submit">Resend Email</button>
       </form>
-      <form action="/api/admin/actions" method="post">
-        <input type="hidden" name="action" value="create-invoice" />
-        <input type="hidden" name="bookingId" value={bookingId} />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <button className="w-full rounded-lg bg-red px-4 py-3 text-sm font-black uppercase text-white" type="submit">Create Invoice</button>
-      </form>
+      <InvoiceCreateButton bookingId={bookingId} returnTo={returnTo} />
     </div>
   );
 }

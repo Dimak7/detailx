@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, type FormEvent } from "react";
 
 export type PromotionTemplate = {
   label: string;
@@ -21,9 +20,12 @@ export function ClientEmailForm({
   returnTo: string;
   templates: PromotionTemplate[];
 }) {
-  const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
-  const [subject, setSubject] = useState(templates[0]?.subject || "");
-  const [message, setMessage] = useState(templates[0]?.message || "");
+  const defaultTemplate = templates[0] || { label: "Custom", subject: "", message: "" };
+  const [selectedTemplate, setSelectedTemplate] = useState(defaultTemplate);
+  const [subject, setSubject] = useState(defaultTemplate.subject);
+  const [message, setMessage] = useState(defaultTemplate.message);
+  const [pending, setPending] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
   function chooseTemplate(template: PromotionTemplate) {
     setSelectedTemplate(template);
@@ -31,8 +33,37 @@ export function ClientEmailForm({
     setMessage(template.message);
   }
 
+  async function sendEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setResult(null);
+
+    try {
+      const response = await fetch("/api/admin/actions", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Admin-Action": "fetch",
+        },
+        body: new FormData(event.currentTarget),
+      });
+      const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string } | null;
+
+      if (!data?.success) {
+        setResult({ success: false, message: data?.error || "Client email could not be sent." });
+        return;
+      }
+
+      setResult({ success: true, message: data.message || "Client email sent." });
+    } catch {
+      setResult({ success: false, message: "Client email could not be sent. Please try again." });
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
-    <form className="mt-4 grid gap-4" action="/api/admin/actions" method="post">
+    <form className="mt-4 grid gap-4" onSubmit={sendEmail}>
       <input type="hidden" name="action" value="send-client-promotion" />
       <input type="hidden" name="returnTo" value={returnTo} />
       <input type="hidden" name="name" value={client.name} />
@@ -73,22 +104,20 @@ export function ClientEmailForm({
         Sending to <span className="font-black text-ink">{client.email || "missing email"}</span>. You can edit the subject and message before sending.
       </div>
 
+      {result ? (
+        <p className={`rounded-lg px-4 py-3 text-sm font-black ${result.success ? "bg-ink text-white" : "bg-red-soft text-ink"}`}>
+          {result.message}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-2 sm:flex-row">
-        <SubmitButton disabled={!client.email || !subject.trim() || !message.trim()} />
-        <button className="rounded-lg border border-ink/10 bg-white px-5 py-3 font-black uppercase text-ink" type="reset" onClick={() => chooseTemplate(templates[0])}>
+        <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white disabled:cursor-not-allowed disabled:bg-steel" disabled={!client.email || !subject.trim() || !message.trim() || pending} type="submit">
+          {pending ? "Sending..." : "Send Email"}
+        </button>
+        <button className="rounded-lg border border-ink/10 bg-white px-5 py-3 font-black uppercase text-ink" type="reset" onClick={() => chooseTemplate(defaultTemplate)}>
           Reset
         </button>
       </div>
     </form>
-  );
-}
-
-function SubmitButton({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white disabled:cursor-not-allowed disabled:bg-steel" disabled={disabled || pending} type="submit">
-      {pending ? "Sending..." : "Send Email"}
-    </button>
   );
 }

@@ -8,7 +8,7 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 - React + TypeScript
 - Tailwind CSS
 - PostgreSQL via `pg`
-- Local JSON booking fallback for development
+- Local JSON fallback for development only
 - Resend for email confirmations
 - Telegram Bot API for booking notifications
 - Twilio for optional SMS confirmations
@@ -45,6 +45,8 @@ Premium mobile detailing website for DETAILX Chicago, built as a production-frie
 |   |-- adminData.ts
 |   |-- bookingSchema.ts
 |   |-- bookingStore.ts
+|   |-- businessMetricsStore.ts
+|   |-- database.ts
 |   |-- invoiceStore.ts
 |   |-- notifications.ts
 |   |-- pricing.ts
@@ -103,13 +105,9 @@ Pricing logic lives in `lib/pricing.ts`. The booking API recomputes the estimate
 
 ## Scheduling and availability
 
-Availability is built around fixed booking windows from `lib/schedule.ts`:
+Availability is built around hourly booking starts from `lib/schedule.ts`:
 
-- 8:00 AM
-- 10:30 AM
-- 1:00 PM
-- 3:30 PM
-- 6:00 PM
+- 6:00 AM through 7:00 PM
 
 The customer form loads open times from `GET /api/availability?date=YYYY-MM-DD`. Booked or manually blocked slots are disabled in the UI.
 
@@ -151,7 +149,7 @@ Admin schedule management lives at:
 
 Admin tools can view bookings by date, block a slot, remove a block, reschedule active bookings, resend confirmations, create invoices, and update booking status to `pending`, `confirmed`, `cancelled`, or `completed`.
 
-If `DATABASE_URL` is set, bookings are stored in PostgreSQL. The app creates this table automatically if it does not exist:
+For production, `DATABASE_URL` is required so bookings, schedule blocks, invoices, and dashboard inputs survive deployments. The app creates these tables automatically if they do not exist:
 
 ```sql
 CREATE TABLE IF NOT EXISTS bookings (
@@ -192,9 +190,15 @@ CREATE TABLE IF NOT EXISTS invoices (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS business_settings (
+  key text PRIMARY KEY,
+  value text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 ```
 
-If `DATABASE_URL` is not set, bookings are stored locally in `data/bookings.json`. That file is ignored by Git.
+If `DATABASE_URL` is not set in local development, data falls back to local JSON files in `data/`. That fallback is intentionally blocked in production/Railway because deployment filesystems are ephemeral and would lose booking data.
 
 ## Email confirmations
 

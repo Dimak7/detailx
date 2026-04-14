@@ -95,6 +95,37 @@ export function getDashboardMetrics(bookings: StoredBooking[]) {
   };
 }
 
+export function getDashboardAnalytics(bookings: StoredBooking[], input: { days: number; marketingExpense: number }) {
+  const todayDate = new Date();
+  const startDate = addDays(todayDate, -(input.days - 1));
+  const today = getDateString(todayDate);
+  const start = getDateString(startDate);
+  const activeBookings = bookings.filter((booking) => booking.status !== "cancelled");
+  const rangeBookings = activeBookings.filter((booking) => booking.date >= start && booking.date <= today);
+  const revenue = rangeBookings.reduce((total, booking) => total + getBookingAmount(booking), 0);
+  const clients = buildAdminClients(rangeBookings);
+  const series = Array.from({ length: input.days }, (_, index) => {
+    const date = getDateString(addDays(startDate, index));
+    const dayBookings = rangeBookings.filter((booking) => booking.date === date);
+
+    return {
+      date,
+      revenue: dayBookings.reduce((total, booking) => total + getBookingAmount(booking), 0),
+      bookings: dayBookings.length,
+    };
+  });
+
+  return {
+    rangeStart: start,
+    rangeEnd: today,
+    revenue,
+    totalClients: clients.length,
+    marketingExpense: input.marketingExpense,
+    profit: revenue - input.marketingExpense,
+    series,
+  };
+}
+
 export function formatMoney(amount: number) {
   return `$${amount.toLocaleString("en-US")}`;
 }

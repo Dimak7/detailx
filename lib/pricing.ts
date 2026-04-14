@@ -5,7 +5,7 @@ export const pricedServices = [
     title: "Full Detail",
     code: "FD",
     tone: "Interior + exterior",
-    description: "A full cabin and exterior reset with a crisp final handoff.",
+    description: "A full interior and exterior reset with a crisp final handoff.",
     image: "/brand/detailx-work/black-porsche-driveway.jpg",
     prices: {
       Sedan: 250,
@@ -16,7 +16,7 @@ export const pricedServices = [
   {
     title: "Interior Detail",
     code: "IN",
-    tone: "Cabin reset",
+    tone: "Interior reset",
     description: "Deep vacuuming, panels, vents, leather care, fabric attention, and odor-minded cleanup.",
     image: "/brand/detailx-work/white-bmw-interior.jpg",
     prices: {
@@ -41,7 +41,7 @@ export const pricedServices = [
     title: "Window Tint",
     code: "WT",
     tone: "Privacy + comfort",
-    description: "A cleaner profile, heat control, and a more finished cabin feel.",
+    description: "A cleaner profile, heat control, and a more finished interior feel.",
     image: "/brand/detailx-work/mercedes-tail-light.jpg",
     startingPrice: 200,
   },

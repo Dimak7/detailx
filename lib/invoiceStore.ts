@@ -1,9 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { StoredBooking } from "./bookingStore";
 import { getBookingAmount, getBookingDetails } from "./adminData";
+import { getDatabasePool } from "./database";
 import { sendInvoicePaymentEmail } from "./resend";
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
@@ -38,26 +39,10 @@ type InvoiceRow = {
   updated_at: Date | string;
 };
 
-let pool: Pool | null = null;
 let hasEnsuredInvoiceSchema = false;
 
-function getPool() {
-  if (!process.env.DATABASE_URL) {
-    return null;
-  }
-
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined,
-    });
-  }
-
-  return pool;
-}
-
 export async function listInvoices() {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureInvoiceSchema(db);
@@ -161,7 +146,7 @@ export async function createStripeInvoiceForBooking(booking: StoredBooking): Pro
 }
 
 export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureInvoiceSchema(db);
@@ -174,7 +159,7 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
 }
 
 async function saveInvoice(invoice: InvoiceRecord) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureInvoiceSchema(db);

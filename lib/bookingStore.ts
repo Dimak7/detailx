@@ -1,8 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { BookingInput } from "./bookingSchema";
+import { getDatabasePool } from "./database";
 import { isTimeSlot, timeSlots, type SlotAvailability, type TimeSlot } from "./schedule";
 
 export type StoredBooking = BookingInput & {
@@ -38,23 +39,7 @@ export type ScheduleBlock = {
   createdAt: string;
 };
 
-let pool: Pool | null = null;
 let hasEnsuredSchema = false;
-
-function getPool() {
-  if (!process.env.DATABASE_URL) {
-    return null;
-  }
-
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined,
-    });
-  }
-
-  return pool;
-}
 
 export async function saveBooking(booking: BookingInput) {
   const storedBooking: StoredBooking = {
@@ -64,7 +49,7 @@ export async function saveBooking(booking: BookingInput) {
     status: "pending",
   };
 
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -77,7 +62,7 @@ export async function saveBooking(booking: BookingInput) {
 }
 
 export async function getAvailability(date: string): Promise<SlotAvailability[]> {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -109,7 +94,7 @@ export async function getAvailability(date: string): Promise<SlotAvailability[]>
 }
 
 export async function listBookingsByDate(date: string) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -131,7 +116,7 @@ export async function listBookingsByDate(date: string) {
 }
 
 export async function listBookings(filters: { date?: string; status?: BookingStatus | "all"; service?: string; search?: string } = {}) {
-  const db = getPool();
+  const db = getDatabasePool();
   const clauses: string[] = [];
   const values: string[] = [];
 
@@ -181,7 +166,7 @@ export async function listBookings(filters: { date?: string; status?: BookingSta
 }
 
 export async function getBookingById(id: string) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -201,7 +186,7 @@ export async function getBookingById(id: string) {
 }
 
 export async function listScheduleBlocks(date: string) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -237,7 +222,7 @@ export async function createScheduleBlock(input: { date: string; time: string; r
     reason: input.reason?.trim() || "Unavailable",
     createdAt: new Date().toISOString(),
   };
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -289,7 +274,7 @@ export async function createScheduleBlock(input: { date: string; time: string; r
 }
 
 export async function deleteScheduleBlock(id: string) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -301,7 +286,7 @@ export async function deleteScheduleBlock(id: string) {
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -387,7 +372,7 @@ export async function updateBookingSchedule(id: string, input: { date: string; t
     throw new Error("Choose a valid time slot.");
   }
 
-  const db = getPool();
+  const db = getDatabasePool();
 
   if (db) {
     await ensureSchema(db);
@@ -654,8 +639,8 @@ function assertStatusTransition(current: BookingStatus, next: BookingStatus) {
     throw new Error("Completed bookings cannot be changed from Telegram/admin controls.");
   }
 
-  if (next === "completed" && current !== "confirmed") {
-    throw new Error("Only confirmed bookings can be marked complete.");
+  if (next === "completed" && current !== "confirmed" && current !== "pending") {
+    throw new Error("Only pending or confirmed bookings can be marked complete.");
   }
 }
 

@@ -120,7 +120,7 @@ function FeaturedServices() {
           <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Start with the finish you want back.</h2>
         </div>
         <p className="max-w-2xl text-lg leading-8 text-steel">
-          The menu is simple on purpose: clean the cabin, sharpen the exterior, correct the finish, protect the result, and make it easy to book.
+          The menu is simple on purpose: clean the interior, sharpen the exterior, correct the finish, protect the result, and make it easy to book.
         </p>
       </div>
       <div className="mt-12 grid gap-4 lg:grid-cols-4">
@@ -193,7 +193,7 @@ function Gallery() {
             <p className="eyebrow">Our Work</p>
             <h2 className="mt-3 text-4xl font-black uppercase leading-none md:text-6xl">DETAILX Results</h2>
           </div>
-          <p className="max-w-sm text-sm font-bold uppercase tracking-[0.08em] text-ash">Recent finishes, cabins, gloss, and correction work.</p>
+          <p className="max-w-sm text-sm font-bold uppercase tracking-[0.08em] text-ash">Recent finishes, interiors, gloss, and correction work.</p>
         </div>
         <div className="flex snap-x gap-4 overflow-x-auto pb-4 md:grid md:auto-rows-[170px] md:grid-cols-6 md:overflow-visible md:pb-0">
           {galleryImages.map((image, index) => (

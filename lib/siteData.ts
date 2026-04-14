@@ -14,7 +14,7 @@ export const galleryImages = [
   },
   {
     src: "/brand/detailx-work/white-bmw-interior.jpg",
-    alt: "Detailed BMW cabin with white performance seats",
+    alt: "Detailed BMW interior with white performance seats",
   },
   {
     src: "/brand/detailx-work/black-mercedes-rear.jpg",
@@ -75,7 +75,7 @@ export const testimonials = [
     neighborhood: "West Loop",
   },
   {
-    quote: "They paid attention to the small stuff. The cabin finally felt reset.",
+    quote: "They paid attention to the small stuff. The interior finally felt reset.",
     name: "Chris R.",
     neighborhood: "Logan Square",
   },

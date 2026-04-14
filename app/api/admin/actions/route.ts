@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminUnauthorizedResponse, isAdminRequest } from "@/lib/adminAuth";
 import { getBookingById, updateBookingSchedule, updateBookingStatus, createScheduleBlock, deleteScheduleBlock, type BookingStatus } from "@/lib/bookingStore";
+import { updateBusinessMetricsSettings } from "@/lib/businessMetricsStore";
 import { sendClientPromotionEmail, sendCustomerBookingConfirmation } from "@/lib/resend";
 import { createStripeInvoiceForBooking, updateInvoiceStatus, type InvoiceStatus } from "@/lib/invoiceStore";
 
@@ -23,42 +24,62 @@ export async function POST(request: Request) {
   try {
     if (action === "update-booking-status") {
       handled = true;
+      const bookingId = String(formData.get("bookingId") || "");
       const status = String(formData.get("status") || "") as BookingStatus;
+      console.info("Admin booking status action started", { bookingId, status });
       if (!bookingStatuses.includes(status)) {
         throw new Error("Choose a valid booking status.");
       }
-      await updateBookingStatus(String(formData.get("bookingId") || ""), status);
+      await updateBookingStatus(bookingId, status);
+      console.info("Admin booking status action completed", { bookingId, status });
+      adminMessage = `Booking marked ${status}.`;
     }
 
     if (action === "reschedule-booking") {
       handled = true;
-      await updateBookingSchedule(String(formData.get("bookingId") || ""), {
-        date: String(formData.get("date") || ""),
-        time: String(formData.get("time") || ""),
+      const bookingId = String(formData.get("bookingId") || "");
+      const date = String(formData.get("date") || "");
+      const time = String(formData.get("time") || "");
+      console.info("Admin booking reschedule action started", { bookingId, date, time });
+      await updateBookingSchedule(bookingId, {
+        date,
+        time,
       });
+      console.info("Admin booking reschedule action completed", { bookingId, date, time });
+      adminMessage = "Booking rescheduled.";
     }
 
     if (action === "resend-email") {
       handled = true;
-      const booking = await getBookingById(String(formData.get("bookingId") || ""));
+      const bookingId = String(formData.get("bookingId") || "");
+      console.info("Admin booking resend email started", { bookingId });
+      const booking = await getBookingById(bookingId);
       if (!booking) {
         throw new Error("Booking was not found.");
       }
       await sendCustomerBookingConfirmation(booking);
+      console.info("Admin booking resend email completed", { bookingId });
+      adminMessage = "Confirmation email resent.";
     }
 
     if (action === "block-slot") {
       handled = true;
+      console.info("Admin block slot action started", { date: String(formData.get("date") || ""), time: String(formData.get("time") || "") });
       await createScheduleBlock({
         date: String(formData.get("date") || ""),
         time: String(formData.get("time") || ""),
         reason: String(formData.get("reason") || "Unavailable"),
       });
+      console.info("Admin block slot action completed", { date: String(formData.get("date") || ""), time: String(formData.get("time") || "") });
+      adminMessage = "Time slot blocked.";
     }
 
     if (action === "remove-block") {
       handled = true;
+      console.info("Admin remove block action started", { blockId: String(formData.get("blockId") || "") });
       await deleteScheduleBlock(String(formData.get("blockId") || ""));
+      console.info("Admin remove block action completed", { blockId: String(formData.get("blockId") || "") });
+      adminMessage = "Time block removed.";
     }
 
     if (action === "create-invoice") {
@@ -74,6 +95,7 @@ export async function POST(request: Request) {
       if (!invoiceResult.success) {
         throw new Error(invoiceResult.error || "Invoice could not be created. Check Stripe setup or booking data.");
       }
+      console.info("Admin invoice action completed", { bookingId, invoiceId: invoiceResult.invoice.id, paymentUrl: invoiceResult.paymentUrl });
       adminMessage = "Invoice created. Payment link is ready.";
     }
 
@@ -104,6 +126,15 @@ export async function POST(request: Request) {
       await sendClientPromotionEmail({ to, name, subject, message });
       console.info("Admin client promotion email sent", { to });
       adminMessage = "Client email sent.";
+    }
+
+    if (action === "update-business-metrics") {
+      handled = true;
+      const marketingExpense = Number(String(formData.get("marketingExpense") || "0").replace(/[^\d.]/g, ""));
+      console.info("Admin business metrics update started", { marketingExpense });
+      await updateBusinessMetricsSettings({ marketingExpense });
+      console.info("Admin business metrics update completed", { marketingExpense });
+      adminMessage = "Dashboard inputs updated.";
     }
 
     if (!handled) {

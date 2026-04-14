@@ -104,7 +104,7 @@ function AdminActionForm({ bookingId, returnTo }: { bookingId: string; returnTo:
       <form action="/api/admin/actions" method="post">
         <input type="hidden" name="action" value="create-invoice" />
         <input type="hidden" name="bookingId" value={bookingId} />
-        <input type="hidden" name="returnTo" value="/admin/invoices" />
+        <input type="hidden" name="returnTo" value={returnTo} />
         <button className="w-full rounded-lg bg-red px-4 py-3 text-sm font-black uppercase text-white" type="submit">Create Invoice</button>
       </form>
     </div>

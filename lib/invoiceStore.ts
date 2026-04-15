@@ -23,7 +23,7 @@ export type InvoiceRecord = {
 };
 
 export type InvoiceCreationResult =
-  | { success: true; invoice: InvoiceRecord; paymentUrl: string }
+  | { success: true; invoice: InvoiceRecord; paymentUrl: string; emailSent: boolean; emailError?: string }
   | { success: false; error: string };
 
 type InvoiceRow = {
@@ -113,6 +113,7 @@ export async function createStripeInvoiceForBooking(booking: StoredBooking): Pro
     }
 
     console.info("Stripe invoice creation succeeded", { bookingId: booking.id, stripeSessionId: data.id, paymentUrl: data.url });
+    console.info("Invoice payment link created", { bookingId: booking.id, paymentUrl: data.url });
 
     const invoice = await saveInvoice({
       id: randomUUID(),
@@ -127,15 +128,20 @@ export async function createStripeInvoiceForBooking(booking: StoredBooking): Pro
       updatedAt: new Date().toISOString(),
     });
 
+    let emailSent = false;
+    let emailError: string | undefined;
+
     try {
       console.info("Invoice payment email send started", { bookingId: booking.id, invoiceId: invoice.id });
       await sendInvoicePaymentEmail(invoice);
+      emailSent = true;
       console.info("Invoice payment email sent", { bookingId: booking.id, invoiceId: invoice.id });
     } catch (error) {
+      emailError = error instanceof Error ? error.message : "Invoice email could not be sent.";
       console.error("Invoice payment email failed after Stripe success", { bookingId: booking.id, invoiceId: invoice.id, error });
     }
 
-    return { success: true, invoice, paymentUrl: invoice.paymentUrl };
+    return { success: true, invoice, paymentUrl: invoice.paymentUrl, emailSent, emailError };
   } catch (error) {
     console.error("Invoice creation crashed safely", { bookingId: booking.id, error });
     return {

@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 
 export function InvoiceCreateButton({ bookingId, returnTo }: { bookingId: string; returnTo: string }) {
   const [pending, setPending] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string; paymentUrl?: string } | null>(null);
+  const [result, setResult] = useState<{ success: boolean; message: string; paymentUrl?: string; warning?: boolean } | null>(null);
 
   async function createInvoice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -20,14 +20,14 @@ export function InvoiceCreateButton({ bookingId, returnTo }: { bookingId: string
         },
         body: new FormData(event.currentTarget),
       });
-      const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string; paymentUrl?: string } | null;
+      const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string; paymentUrl?: string; emailSent?: string } | null;
 
       if (!data?.success) {
         setResult({ success: false, message: data?.error || "Invoice could not be created." });
         return;
       }
 
-      setResult({ success: true, message: data.message || "Invoice created.", paymentUrl: data.paymentUrl });
+      setResult({ success: true, warning: data.emailSent === "false", message: data.message || "Invoice created.", paymentUrl: data.paymentUrl });
     } catch {
       setResult({ success: false, message: "Invoice could not be created. Please try again." });
     } finally {
@@ -44,7 +44,7 @@ export function InvoiceCreateButton({ bookingId, returnTo }: { bookingId: string
         {pending ? "Creating..." : "Create Invoice"}
       </button>
       {result ? (
-        <div className={`rounded-lg px-3 py-3 text-xs font-black leading-5 ${result.success ? "bg-ink text-white" : "bg-red-soft text-ink"}`}>
+        <div className={`rounded-lg px-3 py-3 text-xs font-black leading-5 ${result.success && !result.warning ? "bg-ink text-white" : "bg-red-soft text-ink"}`}>
           <p>{result.message}</p>
           {result.paymentUrl ? (
             <a className="mt-2 inline-flex uppercase underline" href={result.paymentUrl} rel="noreferrer" target="_blank">

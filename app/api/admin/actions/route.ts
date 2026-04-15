@@ -98,9 +98,22 @@ export async function POST(request: Request) {
       if (!invoiceResult.success) {
         throw new Error(invoiceResult.error || "Invoice could not be created. Check Stripe setup or booking data.");
       }
-      console.info("Admin invoice action completed", { bookingId, invoiceId: invoiceResult.invoice.id, paymentUrl: invoiceResult.paymentUrl });
-      adminMessage = "Invoice created. Payment link is ready.";
-      adminData = { invoiceId: invoiceResult.invoice.id, paymentUrl: invoiceResult.paymentUrl };
+      console.info("Admin invoice action completed", {
+        bookingId,
+        invoiceId: invoiceResult.invoice.id,
+        paymentUrl: invoiceResult.paymentUrl,
+        emailSent: invoiceResult.emailSent,
+        emailError: invoiceResult.emailError,
+      });
+      adminMessage = invoiceResult.emailSent
+        ? "Invoice created and emailed to the customer."
+        : "Invoice created, but the customer email could not be sent. Open the payment link and send it manually.";
+      adminData = {
+        invoiceId: invoiceResult.invoice.id,
+        paymentUrl: invoiceResult.paymentUrl,
+        emailSent: String(invoiceResult.emailSent),
+        ...(invoiceResult.emailError ? { emailError: invoiceResult.emailError } : {}),
+      };
     }
 
     if (action === "update-invoice-status") {

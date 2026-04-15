@@ -24,6 +24,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     ["Profit", formatMoney(analytics.profit)],
     ["Unpaid invoices", unpaidInvoices.length],
   ];
+  const operationsCards = [
+    ["Today", metrics.todayBookings.length],
+    ["Upcoming", metrics.upcomingBookings.length],
+    ["Pending", metrics.pendingCount],
+    ["Completed", metrics.completedCount],
+  ];
 
   return (
     <>
@@ -70,16 +76,31 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           ))}
         </div>
 
-        <div className="mt-5 rounded-lg bg-ink p-4 text-white">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Revenue trend</p>
-              <h3 className="mt-2 text-2xl font-black uppercase leading-none">Daily revenue</h3>
+        <div className="mt-5 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-lg bg-smoke p-4 ring-1 ring-ink/5">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Quick status</p>
+            <h3 className="mt-2 text-2xl font-black uppercase leading-none">Today and queue</h3>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {operationsCards.map(([label, value]) => (
+                <div className="rounded-lg bg-white p-4 ring-1 ring-ink/5" key={label}>
+                  <p className="text-[11px] font-black uppercase tracking-[0.12em] text-steel">{label}</p>
+                  <p className="mt-2 text-3xl font-black uppercase leading-none text-ink">{value}</p>
+                </div>
+              ))}
             </div>
-            <p className="text-sm font-bold text-ash">Profit is revenue minus saved marketing expense.</p>
           </div>
-          <div className="mt-4 overflow-hidden rounded-lg bg-white/[0.06] p-2">
-            <RevenueChart series={analytics.series} />
+
+          <div className="rounded-lg bg-ink p-4 text-white">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Revenue trend</p>
+                <h3 className="mt-2 text-2xl font-black uppercase leading-none">Daily revenue</h3>
+              </div>
+              <p className="text-sm font-bold text-ash">Profit uses saved expense settings.</p>
+            </div>
+            <div className="mt-4 overflow-hidden rounded-lg bg-white/[0.06] p-2">
+              <RevenueChart series={analytics.series} />
+            </div>
           </div>
         </div>
       </section>
@@ -154,6 +175,7 @@ function RevenueChart({ series }: { series: Array<{ date: string; revenue: numbe
     return { ...point, x, y };
   });
   const polyline = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const axisMarkers = buildAxisMarkers(points);
 
   return (
     <svg className="h-64 w-full" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Revenue trend chart" preserveAspectRatio="none">
@@ -168,14 +190,28 @@ function RevenueChart({ series }: { series: Array<{ date: string; revenue: numbe
       ))}
       <polygon points={`0,${height} ${polyline} ${width},${height}`} fill="url(#revenueFill)" />
       <polyline fill="none" points={polyline} stroke="#c1121f" strokeLinecap="round" strokeLinejoin="round" strokeWidth="5" />
-      {points.filter((_, index) => index % Math.max(1, Math.ceil(points.length / 8)) === 0 || index === points.length - 1).map((point) => (
+      {points.map((point) => (
         <g key={point.date}>
           <circle cx={point.x} cy={point.y} fill="#ffffff" r="5" />
-          <text fill="#c7c9c7" fontSize="14" fontWeight="800" textAnchor="middle" x={point.x} y={height - 10}>{formatChartDate(point.date)}</text>
+        </g>
+      ))}
+      <line x1="0" x2={width} y1={height - 24} y2={height - 24} stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
+      {axisMarkers.map((point) => (
+        <g key={`axis-${point.date}`}>
+          <line x1={point.x} x2={point.x} y1={height - 30} y2={height - 18} stroke="rgba(255,255,255,0.24)" strokeWidth="1" />
+          <text fill="#c7c9c7" fontSize="14" fontWeight="800" textAnchor="middle" x={point.x} y={height - 4}>{formatChartDate(point.date)}</text>
         </g>
       ))}
     </svg>
   );
+}
+
+function buildAxisMarkers(points: Array<{ date: string; x: number }>) {
+  if (points.length <= 2) {
+    return points;
+  }
+
+  return [points[0], points[Math.floor(points.length / 2)], points[points.length - 1]];
 }
 
 function formatChartDate(value: string) {

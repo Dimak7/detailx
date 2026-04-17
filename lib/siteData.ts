@@ -1,10 +1,12 @@
-import { pricedServices } from "./pricing";
+import { getStartingPriceLabel, pricedServices } from "./pricing";
 
-export const services = pricedServices.map(({ title, code, tone, description }) => ({
+export const services = pricedServices.map(({ title, code, tone, description, includes }) => ({
   title,
   code,
   tone,
   description,
+  price: getStartingPriceLabel(title),
+  includes,
 }));
 
 export const galleryImages = [

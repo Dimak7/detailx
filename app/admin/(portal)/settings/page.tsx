@@ -1,5 +1,5 @@
 import { AdminPageHeader } from "@/components/admin/AdminShell";
-import { pricedServices } from "@/lib/pricing";
+import { getStartingPriceLabel, pricedServices } from "@/lib/pricing";
 import { timeSlots } from "@/lib/schedule";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +21,11 @@ export default function AdminSettingsPage() {
           <div className="mt-4 grid gap-2">
             {pricedServices.map((service) => (
               <div className="rounded-lg bg-smoke px-4 py-3" key={service.title}>
-                <p className="font-black uppercase">{service.title}</p>
-                <p className="text-sm text-steel">Shown in booking flow and admin estimates.</p>
+                <div className="flex items-start justify-between gap-4">
+                  <p className="font-black uppercase">{service.title}</p>
+                  <p className="shrink-0 text-sm font-black text-red">{getStartingPriceLabel(service.title)}</p>
+                </div>
+                <p className="mt-1 text-sm text-steel">Shown in booking flow and admin estimates.</p>
               </div>
             ))}
           </div>

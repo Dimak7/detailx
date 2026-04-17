@@ -5,61 +5,123 @@ export const pricedServices = [
     title: "Full Detail",
     code: "FD",
     tone: "Interior + exterior",
-    description: "A full interior and exterior reset with a crisp final handoff.",
+    description: "A complete interior and exterior refresh for regular maintenance and a crisp handoff.",
     image: "/brand/detailx-work/black-porsche-driveway.jpg",
     prices: {
       Sedan: 250,
       SUV: 270,
       Truck: 290,
     },
+    includes: [
+      "Hand wash and microfiber dry",
+      "Wheel, tire, and exterior glass cleaning",
+      "Interior vacuum and surface wipedown",
+      "Mats, panels, vents, and touch points cleaned",
+      "Tire dressing and final inspection",
+    ],
+  },
+  {
+    title: "Deep Cleaning Full Detail",
+    code: "DC",
+    tone: "Showroom reset",
+    description: "A deeper interior and exterior reconditioning service for dirtier vehicles or a higher-level reset.",
+    image: "/brand/detailx-work/white-bmw-interior.jpg",
+    prices: {
+      Sedan: 400,
+      SUV: 400,
+      Truck: 400,
+    },
+    includes: [
+      "Hand wash, decontamination, and microfiber dry",
+      "Door jambs, exterior glass, wheels, and tires deep cleaned",
+      "Clay treatment if needed plus wax or protection layer",
+      "Deep vacuum, carpet and mat cleaning, and trunk cleanup",
+      "Seat cleaning or conditioning based on material",
+      "Light to moderate odor or stain attention",
+      "UV protection on hard interior surfaces",
+    ],
   },
   {
     title: "Interior Detail",
     code: "IN",
     tone: "Interior reset",
-    description: "Deep vacuuming, panels, vents, leather care, fabric attention, and odor-minded cleanup.",
-    image: "/brand/detailx-work/white-bmw-interior.jpg",
+    description: "A focused interior reset for the surfaces you see, touch, and sit in every day.",
+    image: "/brand/detailx-work/bmw-dash-detail.jpg",
     prices: {
       Sedan: 160,
       SUV: 180,
       Truck: 200,
     },
+    includes: [
+      "Thorough vacuum of seats, floors, mats, and trunk",
+      "Dashboard, console, cupholders, panels, and vents cleaned",
+      "Interior glass cleaned",
+      "Leather or fabric-safe seat care",
+      "Light odor-minded cleanup and final wipedown",
+    ],
   },
   {
     title: "Exterior Detail",
     code: "EX",
     tone: "Gloss wash",
-    description: "Foam wash, wheels, trim finish, glass, tires, and a sharper exterior presentation.",
+    description: "A premium exterior wash and finish service for sharper gloss and cleaner presence.",
     image: "/brand/detailx-work/black-mercedes-rear.jpg",
     prices: {
       Sedan: 100,
-      SUV: 120,
-      Truck: 140,
+      SUV: 100,
+      Truck: 100,
     },
+    includes: [
+      "Foam pre-soak and hand wash",
+      "Microfiber dry and finish wipe",
+      "Wheel faces, tires, and exterior glass cleaned",
+      "Tire dressing",
+      "Quick trim and paint presentation check",
+    ],
   },
   {
     title: "Window Tint",
     code: "WT",
     tone: "Privacy + comfort",
-    description: "A cleaner profile, heat control, and a more finished interior feel.",
+    description: "A cleaner profile with privacy, comfort, and a more finished interior feel.",
     image: "/brand/detailx-work/mercedes-tail-light.jpg",
     startingPrice: 200,
+    includes: [
+      "Consultation on shade and coverage",
+      "Window prep and film installation",
+      "Clean edges and professional finish",
+      "Aftercare guidance for curing and maintenance",
+    ],
   },
   {
     title: "Ceramic Coating",
     code: "CC",
     tone: "Protection",
-    description: "Surface prep and coating requests for stronger gloss, easier washing, and durable protection.",
+    description: "Gloss-focused protection that helps the vehicle stay cleaner and easier to maintain.",
     image: "/brand/detailx-work/red-audi-foam.jpg",
     startingPrice: 500,
+    includes: [
+      "Exterior wash and surface prep",
+      "Paint decontamination as needed",
+      "Panel wipe before coating",
+      "Ceramic coating application",
+      "Cure guidance and maintenance recommendations",
+    ],
   },
   {
     title: "Paint Correction",
     code: "PC",
     tone: "Clarity work",
-    description: "Polishing and correction work for swirls, haze, oxidation, and deeper paint clarity.",
+    description: "Polishing and correction work for swirls, haze, oxidation, and sharper paint clarity.",
     image: "/brand/detailx-work/audi-puddle-light.jpg",
     startingPrice: 100,
+    includes: [
+      "Paint inspection and prep wash",
+      "Decontamination as needed",
+      "Machine polishing or correction plan",
+      "Gloss refinement for visible clarity",
+      "Protection recommendation after correction",
+    ],
   },
 ] as const;
 
@@ -138,8 +200,10 @@ export function getStartingPriceLabel(service: string) {
   }
 
   if ("prices" in servicePricing) {
-    const startingPrice = Math.min(...Object.values(servicePricing.prices));
-    return `Starting at $${startingPrice}`;
+    const prices = Object.values(servicePricing.prices);
+    const startingPrice = Math.min(...prices);
+    const isFlatPrice = prices.every((price) => price === startingPrice);
+    return isFlatPrice ? `$${startingPrice}` : `Starting at $${startingPrice}`;
   }
 
   return `Starting at $${servicePricing.startingPrice}+`;

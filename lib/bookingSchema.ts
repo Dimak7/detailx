@@ -4,6 +4,7 @@ import { timeSlots } from "./schedule";
 
 export const bookingServices = [
   "Full Detail",
+  "Deep Cleaning Full Detail",
   "Interior Detail",
   "Exterior Detail",
   "Ceramic Coating",

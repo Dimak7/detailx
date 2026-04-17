@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { Nav } from "@/components/Nav";
+import { ServiceMenu } from "@/components/ServiceMenu";
 import { galleryImages, processSteps, reasons, services, testimonials } from "@/lib/siteData";
 
 const googleBusinessUrl = "https://share.google/KsLW0nq1eJoenaYYe";
@@ -110,37 +111,18 @@ function ProofStrip() {
 }
 
 function FeaturedServices() {
-  const featured = services.slice(0, 4);
-
   return (
     <section className="section-pad content-shell" id="services">
       <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
         <div>
-          <p className="eyebrow">Featured services</p>
-          <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Start with the finish you want back.</h2>
+          <p className="eyebrow">Detailing menu</p>
+          <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Choose the level of care your car needs.</h2>
         </div>
         <p className="max-w-2xl text-lg leading-8 text-steel">
-          The menu is simple on purpose: clean the interior, sharpen the exterior, correct the finish, protect the result, and make it easy to book.
+          Simple at first glance, detailed when you need it. Open any service to see what is included before you book.
         </p>
       </div>
-      <div className="mt-12 grid gap-4 lg:grid-cols-4">
-        {featured.map((service, index) => (
-          <article className={`motion-card rounded-lg p-6 ${index === 0 ? "bg-ink text-white" : "bg-white text-ink soft-ring"}`} key={service.title}>
-            <div className={`mb-12 flex h-12 w-12 items-center justify-center rounded-lg text-sm font-black ${index === 0 ? "bg-red text-white" : "bg-ink text-white"}`}>{service.code}</div>
-            <p className="text-sm font-black uppercase text-red">{service.tone}</p>
-            <h3 className="mt-3 text-2xl font-black uppercase leading-none">{service.title}</h3>
-            <p className={`mt-4 leading-7 ${index === 0 ? "text-ash" : "text-steel"}`}>{service.description}</p>
-          </article>
-        ))}
-      </div>
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        {services.slice(4).map((service) => (
-          <article className="rounded-lg border border-ink/10 bg-white px-5 py-4" key={service.title}>
-            <p className="text-sm font-black uppercase text-red">{service.title}</p>
-            <p className="mt-2 text-sm text-steel">{service.description}</p>
-          </article>
-        ))}
-      </div>
+      <ServiceMenu services={services} />
     </section>
   );
 }

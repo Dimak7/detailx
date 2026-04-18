@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { fireBookingConversion } from "@/lib/gtag";
+import { trackBookingLead } from "@/lib/metaPixel";
 import {
   buildBookingEstimate,
   getStartingPriceLabel,
@@ -151,6 +152,7 @@ export function BookingForm() {
 
       const bookingId = typeof result.bookingId === "string" ? result.bookingId : "";
       fireBookingConversion(bookingId);
+      trackBookingLead(bookingId);
       setConfirmation({
         details: bookingEstimate.details,
         date: selectedDate,

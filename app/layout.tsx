@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
+      <body>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18082565611"
           strategy="afterInteractive"
@@ -33,8 +33,8 @@ export default function RootLayout({
             window.gtag('config', 'AW-18082565611');
           `}
         </Script>
-      </head>
-      <body>{children}</body>
+        {children}
+      </body>
     </html>
   );
 }

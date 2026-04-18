@@ -2,11 +2,12 @@ export const GOOGLE_ADS_ID = "AW-18082565611";
 export const BOOKING_CONVERSION_SEND_TO = "AW-18082565611/USX2CObpmZ4cEOubuK5D";
 
 type GtagCommand = "js" | "config" | "event";
+type GtagFunction = (command: GtagCommand, target: string | Date, params?: Record<string, unknown>) => void;
 
 declare global {
   interface Window {
     dataLayer?: unknown[];
-    gtag?: (command: GtagCommand, target: string | Date, params?: Record<string, unknown>) => void;
+    gtag?: GtagFunction;
   }
 }
 
@@ -25,7 +26,7 @@ export function fireBookingConversion(transactionId = "") {
   try {
     const gtag =
       window.gtag ||
-      ((...args: Parameters<NonNullable<typeof window.gtag>>) => {
+      ((...args: Parameters<GtagFunction>) => {
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push(args);
       });

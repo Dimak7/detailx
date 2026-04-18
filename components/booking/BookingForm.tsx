@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { fireBookingConversion } from "@/lib/gtag";
 import {
   buildBookingEstimate,
   getStartingPriceLabel,
@@ -148,6 +149,8 @@ export function BookingForm() {
         throw new Error(result.error || "Booking request failed.");
       }
 
+      const bookingId = typeof result.bookingId === "string" ? result.bookingId : "";
+      fireBookingConversion(bookingId);
       setConfirmation({
         details: bookingEstimate.details,
         date: selectedDate,

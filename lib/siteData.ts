@@ -1,6 +1,19 @@
 import { getStartingPriceLabel, pricedServices } from "./pricing";
 
-export const services = pricedServices.map(({ title, code, tone, description, includes, image, category, recommended = false, ctaLabel }) => ({
+export type ServiceTier = {
+  title: string;
+  code: string;
+  tone: string;
+  description: string;
+  price: string;
+  includes: readonly string[];
+  image?: string;
+  category?: string;
+  ctaLabel?: string;
+  recommended?: boolean;
+};
+
+export const services: ServiceTier[] = pricedServices.map(({ title, code, tone, description, includes, image, category, recommended = false, ctaLabel }) => ({
   title,
   code,
   tone,

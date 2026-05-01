@@ -7,7 +7,7 @@ export type ServiceTier = {
   description: string;
   price: string;
   includes: readonly string[];
-  image?: string;
+  image: string;
   category?: string;
   ctaLabel?: string;
   recommended?: boolean;

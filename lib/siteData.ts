@@ -1,6 +1,6 @@
 import { getStartingPriceLabel, pricedServices } from "./pricing";
 
-export const services = pricedServices.map(({ title, code, tone, description, includes, image, category, recommended, ctaLabel }) => ({
+export const services = pricedServices.map(({ title, code, tone, description, includes, image, category, recommended = false, ctaLabel }) => ({
   title,
   code,
   tone,

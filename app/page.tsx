@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Suspense } from "react";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { Nav } from "@/components/Nav";
 import { ServiceMenu } from "@/components/ServiceMenu";
@@ -257,7 +258,9 @@ function Booking() {
             ))}
           </div>
         </div>
-        <BookingForm />
+        <Suspense fallback={null}>
+          <BookingForm />
+        </Suspense>
       </div>
     </section>
   );

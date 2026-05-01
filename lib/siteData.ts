@@ -6,6 +6,11 @@ export type ServiceTier = {
   tone: string;
   description: string;
   price: string;
+  pricing?: {
+    sedan: string;
+    suv: string;
+    truck: string;
+  };
   includes: readonly string[];
   image: string;
   category: string;
@@ -22,6 +27,11 @@ export const services: ServiceTier[] = pricedServices.map((service) => {
     tone: service.tone,
     description: service.description,
     price: getStartingPriceLabel(service.title),
+    pricing: "prices" in service ? {
+      sedan: `$${service.prices.Sedan}`,
+      suv: `$${service.prices.SUV}`,
+      truck: `$${service.prices.Truck}`,
+    } : undefined,
     includes: service.includes,
     image: service.image,
     category: service.category,

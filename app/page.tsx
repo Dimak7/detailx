@@ -18,7 +18,7 @@ const faqItems = [
   ["Do you service all of Chicago?", "DETAILX Chicago serves Chicago neighborhoods and can review nearby suburb requests based on schedule and setup."],
   ["Do I need to provide water or power?", "We confirm site needs before the appointment so your location is set up for the service you choose."],
   ["How long does a detail take?", "Most appointments run 2 to 5 hours depending on vehicle size, condition, and service level."],
-  ["Can I book coating or paint correction online?", "Yes. Start with the reservation form and we will confirm the prep level, timing, and final scope before work begins."],
+  ["Can I request coating or paint correction online?", "Yes. Start with the reservation form and we will confirm the prep level, timing, and final scope before work begins."],
 ];
 
 export default function Home() {

@@ -11,8 +11,8 @@ export const pricedServices = [
     ctaLabel: "Book Exterior",
     prices: {
       Sedan: 100,
-      SUV: 100,
-      Truck: 100,
+      SUV: 120,
+      Truck: 140,
     },
     includes: [
       "Hand wash",
@@ -32,9 +32,9 @@ export const pricedServices = [
     category: "Detailing",
     ctaLabel: "Book Interior",
     prices: {
-      Sedan: 180,
+      Sedan: 160,
       SUV: 180,
-      Truck: 180,
+      Truck: 200,
     },
     includes: [
       "Full vacuum",
@@ -53,11 +53,11 @@ export const pricedServices = [
     image: "/brand/detailx-work/white-bmw-interior.jpg",
     category: "Detailing",
     recommended: true,
-    ctaLabel: "Book Full",
+    ctaLabel: "Book Full Detail",
     prices: {
       Sedan: 250,
-      SUV: 250,
-      Truck: 250,
+      SUV: 270,
+      Truck: 290,
     },
     includes: [
       "Full interior detail",
@@ -75,11 +75,11 @@ export const pricedServices = [
     description: "Best for very dirty cars or heavier restoration.",
     image: "/brand/detailx-work/white-bmw-interior.jpg",
     category: "Detailing",
-    ctaLabel: "Book Deep",
+    ctaLabel: "Book Deep Detail",
     prices: {
       Sedan: 350,
-      SUV: 350,
-      Truck: 350,
+      SUV: 370,
+      Truck: 390,
     },
     includes: [
       "Everything in Full Detail",
@@ -99,11 +99,7 @@ export const pricedServices = [
     image: "/brand/detailx-work/audi-puddle-light.jpg",
     category: "Add-ons",
     ctaLabel: "Add Headlight Restoration",
-    prices: {
-      Sedan: 80,
-      SUV: 80,
-      Truck: 80,
-    },
+    startingPrice: 120,
     includes: [
       "Headlight cleaning",
       "Sanding/restoration process",
@@ -148,11 +144,11 @@ export const pricedServices = [
     title: "Paint Correction",
     code: "PC",
     tone: "Correction + polishing",
-    description: "Premium polishing and correction work for swirls, haze, oxidation, and sharper paint clarity.",
+    description: "Improves paint clarity, gloss, and surface defects through machine polishing.",
     image: "/brand/detailx-work/audi-puddle-light.jpg",
     category: "Premium",
-    ctaLabel: "Book Correction",
-    startingPrice: 100,
+    ctaLabel: "Request Paint Correction",
+    startingPrice: 300,
     includes: [
       "Paint inspection and prep wash",
       "Decontamination as needed",

@@ -9,6 +9,11 @@ type ServiceMenuItem = {
   tone: string;
   description: string;
   price: string;
+  pricing?: {
+    sedan: string;
+    suv: string;
+    truck: string;
+  };
   includes: readonly string[];
   image: string;
   category: string;
@@ -49,6 +54,7 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
               </div>
               <div className="p-5">
                 <p className={`text-sm leading-7 ${isFeatured ? "text-ash" : "text-steel"}`}>{service.description}</p>
+                <ServicePriceDisplay service={service} featured={isFeatured} />
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
                   <button
@@ -91,7 +97,7 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
       </div>
 
       <div className="rounded-lg border border-red/15 bg-red-soft/50 px-5 py-4 text-sm font-bold text-ink">
-        Paint correction and polishing are not included in standard detailing packages. They are separate premium services.
+        Paint correction and polishing are not included in standard detailing packages. They are separate premium services starting at $300+.
       </div>
 
       <div className="space-y-5">
@@ -114,6 +120,7 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
                 <p className="mt-8 text-sm font-black uppercase text-red">{service.tone}</p>
                 <h4 className="mt-3 text-2xl font-black uppercase leading-none">{service.title}</h4>
                 <p className="mt-4 text-sm leading-7 text-steel">{service.description}</p>
+                <ServicePriceDisplay service={service} featured={false} />
                 <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
                   <button
                     aria-expanded={isOpen}
@@ -145,6 +152,31 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ServicePriceDisplay({ service, featured }: { service: ServiceMenuItem; featured: boolean }) {
+  if (!service.pricing) {
+    return (
+      <div className={`mt-4 rounded-lg border px-4 py-3 text-sm font-black uppercase ${featured ? "border-white/10 bg-white/[0.04] text-white" : "border-ink/10 bg-smoke text-ink"}`}>
+        {service.price}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`mt-4 grid gap-2 rounded-lg border p-3 text-sm ${featured ? "border-white/10 bg-white/[0.04]" : "border-ink/10 bg-smoke"}`}>
+      {[
+        ["Sedan", service.pricing.sedan],
+        ["SUV", service.pricing.suv],
+        ["Truck", service.pricing.truck],
+      ].map(([vehicle, price]) => (
+        <div className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 font-black uppercase ${featured ? "bg-white/[0.06] text-white" : "bg-white text-ink"}`} key={vehicle}>
+          <span className={featured ? "text-ash" : "text-steel"}>{vehicle}</span>
+          <span>{price}</span>
+        </div>
+      ))}
     </div>
   );
 }

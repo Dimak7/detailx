@@ -8,23 +8,27 @@ export type ServiceTier = {
   price: string;
   includes: readonly string[];
   image: string;
-  category?: string;
-  ctaLabel?: string;
-  recommended?: boolean;
+  category: string;
+  ctaLabel: string;
+  recommended: boolean;
 };
 
-export const services: ServiceTier[] = pricedServices.map(({ title, code, tone, description, includes, image, category, recommended = false, ctaLabel }) => ({
-  title,
-  code,
-  tone,
-  description,
-  price: getStartingPriceLabel(title),
-  includes,
-  image,
-  category,
-  recommended: Boolean(recommended),
-  ctaLabel,
-}));
+export const services: ServiceTier[] = pricedServices.map((service) => {
+  const recommended = "recommended" in service ? service.recommended : false;
+
+  return {
+    title: service.title,
+    code: service.code,
+    tone: service.tone,
+    description: service.description,
+    price: getStartingPriceLabel(service.title),
+    includes: service.includes,
+    image: service.image,
+    category: service.category,
+    recommended: recommended ?? false,
+    ctaLabel: service.ctaLabel,
+  };
+});
 
 export const galleryImages = [
   {

@@ -13,13 +13,13 @@ type ServiceMenuItem = {
   image: string;
   category: string;
   recommended: boolean;
-  ctaLabel?: string;
+  ctaLabel: string;
 };
 
 export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[] }) {
   const [openService, setOpenService] = useState<string | null>(services[0]?.title ?? null);
-  const packageServices = services.filter((service) => service.category === "package");
-  const premiumServices = services.filter((service) => service.category !== "package");
+  const packageServices = services.filter((service) => service.category === "Detailing");
+  const premiumServices = services.filter((service) => service.category !== "Detailing");
 
   return (
     <div className="mt-12 space-y-10">

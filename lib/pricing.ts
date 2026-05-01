@@ -7,7 +7,7 @@ export const pricedServices = [
     tone: "Maintenance refresh",
     description: "A clean maintenance package for drivers who want the basics handled well without overbooking the day.",
     image: "/brand/detailx-work/black-mercedes-rear.jpg",
-    category: "package",
+    category: "Detailing",
     ctaLabel: "Book Simple",
     prices: {
       Sedan: 180,
@@ -28,7 +28,7 @@ export const pricedServices = [
     tone: "Most popular",
     description: "Our most-booked full in-and-out detail for drivers who want a stronger interior reset and a sharper finish outside.",
     image: "/brand/detailx-work/white-bmw-interior.jpg",
-    category: "package",
+    category: "Detailing",
     recommended: true,
     ctaLabel: "Book Full",
     prices: {
@@ -53,7 +53,7 @@ export const pricedServices = [
     tone: "Stronger restoration",
     description: "A higher-effort interior and exterior reset for dirtier vehicles, stronger cleanup needs, or a more complete reconditioning.",
     image: "/brand/detailx-work/white-bmw-interior.jpg",
-    category: "package",
+    category: "Detailing",
     ctaLabel: "Book Deep",
     prices: {
       Sedan: 350,
@@ -77,7 +77,7 @@ export const pricedServices = [
     tone: "Privacy + comfort",
     description: "A cleaner profile with privacy, comfort, and a more finished interior feel.",
     image: "/brand/detailx-work/mercedes-tail-light.jpg",
-    category: "premium",
+    category: "Premium",
     ctaLabel: "Book Tint",
     startingPrice: 200,
     includes: [
@@ -93,7 +93,7 @@ export const pricedServices = [
     tone: "Protection",
     description: "Gloss-focused protection that helps the vehicle stay cleaner and easier to maintain.",
     image: "/brand/detailx-work/red-audi-foam.jpg",
-    category: "premium",
+    category: "Premium",
     ctaLabel: "Book Coating",
     startingPrice: 500,
     includes: [
@@ -110,7 +110,7 @@ export const pricedServices = [
     tone: "Correction + polishing",
     description: "Premium polishing and correction work for swirls, haze, oxidation, and sharper paint clarity.",
     image: "/brand/detailx-work/audi-puddle-light.jpg",
-    category: "premium",
+    category: "Premium",
     ctaLabel: "Book Correction",
     startingPrice: 100,
     includes: [

@@ -1,12 +1,16 @@
 import { getStartingPriceLabel, pricedServices } from "./pricing";
 
-export const services = pricedServices.map(({ title, code, tone, description, includes }) => ({
+export const services = pricedServices.map(({ title, code, tone, description, includes, image, category, recommended, ctaLabel }) => ({
   title,
   code,
   tone,
   description,
   price: getStartingPriceLabel(title),
   includes,
+  image,
+  category,
+  recommended: Boolean(recommended),
+  ctaLabel,
 }));
 
 export const galleryImages = [
@@ -32,7 +36,7 @@ export const galleryImages = [
   },
   {
     src: "/brand/detailx-work/red-audi-foam.jpg",
-    alt: "Foam wash during a DETAILX exterior detail",
+    alt: "Foam wash during a DETAILX Chicago appointment",
   },
 ];
 
@@ -87,7 +91,7 @@ export const testimonials = [
     neighborhood: "Lincoln Park",
   },
   {
-    quote: "The exterior detail brought the gloss back fast. I would book again.",
+    quote: "The finish came back sharp fast. I would book again.",
     name: "Marcus D.",
     neighborhood: "South Loop",
   },

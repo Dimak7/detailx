@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { fireBookingConversion } from "@/lib/gtag";
 import { trackBookingLead } from "@/lib/metaPixel";
 import {
@@ -39,6 +40,7 @@ const initialServiceCounts = pricedServices.reduce((counts, service, index) => {
 }, {} as ServiceCounts);
 
 export function BookingForm() {
+  const searchParams = useSearchParams();
   const [serviceCounts, setServiceCounts] = useState<ServiceCounts>(initialServiceCounts);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>("Sedan");
   const [selectedDate, setSelectedDate] = useState("");
@@ -63,6 +65,27 @@ export function BookingForm() {
   const totalDetails = selectedDetails.length;
   const primaryDetail = selectedDetails[0] ?? { service: pricedServices[0].title, vehicleType: selectedVehicle };
   const availableSlotByTime = new Map(availability.map((slot) => [slot.time, slot]));
+
+  useEffect(() => {
+    const requestedService = searchParams.get("service");
+
+    if (!requestedService || !pricedServices.some((service) => service.title === requestedService)) {
+      return;
+    }
+
+    setServiceCounts((current) => {
+      if (current[requestedService as BookingService] === 1 && getDetailCount(current) === 1) {
+        return current;
+      }
+
+      const next = pricedServices.reduce((counts, service) => {
+        counts[service.title] = service.title === requestedService ? 1 : 0;
+        return counts;
+      }, {} as ServiceCounts);
+
+      return next;
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedDate) {

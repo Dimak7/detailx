@@ -116,10 +116,10 @@ function FeaturedServices() {
       <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
         <div>
           <p className="eyebrow">Detailing menu</p>
-          <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Choose the level of care your car needs.</h2>
+          <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Choose the tier that fits your vehicle.</h2>
         </div>
         <p className="max-w-2xl text-lg leading-8 text-steel">
-          Simple at first glance, detailed when you need it. Open any service to see what is included before you book.
+          Three core detailing tiers up front, premium correction and protection services right behind them. Open any card to see exactly what is included before you book.
         </p>
       </div>
       <ServiceMenu services={services} />
@@ -249,8 +249,8 @@ function Booking() {
             Add another detail - get 10% off
           </div>
           <p className="eyebrow">Reservations</p>
-          <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Choose the detail. We bring the standard.</h2>
-          <p className="mt-6 leading-8 text-ash">Pick the service, vehicle size, date, and time. We handle the rest.</p>
+          <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Pick the tier. We bring the finish.</h2>
+          <p className="mt-6 leading-8 text-ash">Simple Detail for upkeep, Full Detail for the full reset, Deep Detail for dirtier vehicles, plus separate premium protection and correction services.</p>
           <div className="mt-8 grid gap-3">
             {["Quality Work", "Simple Process", "Transparent Pricing", "We Save Your Time"].map((item) => (
               <div className="rounded-lg border border-white/[0.12] bg-white/[0.08] px-4 py-3 text-sm font-black uppercase" key={item}>{item}</div>

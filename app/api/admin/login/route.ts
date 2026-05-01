@@ -9,23 +9,57 @@ export async function POST(request: Request) {
     const config = getAdminAuthConfigStatus();
     if (!config.configured) {
       console.error("Admin login route rejected missing configuration.", { missing: config.missing });
-      return NextResponse.redirect(new URL("/admin/login?error=config", request.url), { status: 303 });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Admin login is not configured. Missing: ${config.missing.join(", ")}.`,
+        },
+        { status: 503 }
+      );
     }
 
-    const formData = await request.formData();
-    const email = String(formData.get("email") || "");
-    const password = String(formData.get("password") || "");
+    const contentType = request.headers.get("content-type") || "";
+    let email = "";
+    let password = "";
+
+    if (contentType.includes("application/json")) {
+      const payload = (await request.json()) as { email?: string; password?: string };
+      email = String(payload.email || "");
+      password = String(payload.password || "");
+    } else {
+      const formData = await request.formData();
+      email = String(formData.get("email") || "");
+      password = String(formData.get("password") || "");
+    }
 
     if (!validateAdminCredentials(email, password)) {
-      return NextResponse.redirect(new URL("/admin/login?error=1", request.url), { status: 303 });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid admin credentials.",
+        },
+        { status: 401 }
+      );
     }
 
-    const response = NextResponse.redirect(new URL("/admin/dashboard", request.url), { status: 303 });
+    const response = NextResponse.json(
+      {
+        ok: true,
+        redirectTo: "/admin/dashboard",
+      },
+      { status: 200 }
+    );
     setAdminSessionCookie(response, email);
     console.info("Admin login succeeded", { email: email.trim().toLowerCase() });
     return response;
   } catch (error) {
     console.error("Admin login failed safely.", { error });
-    return NextResponse.redirect(new URL("/admin/login?error=config", request.url), { status: 303 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Admin login could not be completed. Please try again.",
+      },
+      { status: 500 }
+    );
   }
 }

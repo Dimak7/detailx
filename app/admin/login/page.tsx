@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { getAdminAuthConfigStatus } from "@/lib/adminAuth";
+import { redirect } from "next/navigation";
+import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
+import { getAdminAuthConfigStatus, getAdminSession } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
   const params = await searchParams;
   const config = getAdminAuthConfigStatus();
+  const session = await getAdminSession();
   const errorMessage = getLoginErrorMessage(params?.error, config.missing);
+
+  if (session) {
+    redirect("/admin/dashboard");
+  }
 
   return (
     <main className="grid min-h-screen place-items-center bg-ink px-4 py-10 text-white">
@@ -15,19 +22,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams?: 
         <h1 className="mt-3 text-4xl font-black uppercase leading-none">Admin Login</h1>
         <p className="mt-4 text-sm leading-6 text-ash">Access the internal operations portal for schedule, bookings, clients, and invoices.</p>
         {errorMessage ? <p className="mt-4 rounded-lg bg-red-soft px-4 py-3 text-sm font-black text-ink">{errorMessage}</p> : null}
-        <form className="mt-6 grid gap-4" action="/api/admin/login" method="post">
-          <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-ash">
-            Email
-            <input className="min-h-12 rounded-lg border border-white/15 bg-white px-4 text-ink outline-none" name="email" type="email" required />
-          </label>
-          <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-ash">
-            Password
-            <input className="min-h-12 rounded-lg border border-white/15 bg-white px-4 text-ink outline-none" name="password" type="password" required />
-          </label>
-          <button className="rounded-lg bg-red px-5 py-4 font-black uppercase text-white transition hover:bg-red-dark" type="submit">
-            Sign In
-          </button>
-        </form>
+        <AdminLoginForm />
         <Link className="mt-5 inline-flex text-sm font-black uppercase text-ash hover:text-white" href="/">
           Back to public site
         </Link>

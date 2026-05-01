@@ -91,7 +91,7 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
       </div>
 
       <div className="rounded-lg border border-red/15 bg-red-soft/50 px-5 py-4 text-sm font-bold text-ink">
-        Paint correction and polishing are not included in these packages. They are separate premium services.
+        Paint correction and polishing are not included in standard detailing packages. They are separate premium services.
       </div>
 
       <div className="space-y-5">

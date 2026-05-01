@@ -251,7 +251,7 @@ function Booking() {
           </div>
           <p className="eyebrow">Reservations</p>
           <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Pick the tier. We bring the finish.</h2>
-          <p className="mt-6 leading-8 text-ash">Simple Detail for upkeep, Full Detail for the full reset, Deep Detail for dirtier vehicles, plus separate premium protection and correction services.</p>
+          <p className="mt-6 leading-8 text-ash">Exterior Detail for a quick outside refresh, Interior Full Detail for the cabin, Full Detail for the best value, and Deep Detail for heavier cleanup.</p>
           <div className="mt-8 grid gap-3">
             {["Quality Work", "Simple Process", "Transparent Pricing", "We Save Your Time"].map((item) => (
               <div className="rounded-lg border border-white/[0.12] bg-white/[0.08] px-4 py-3 text-sm font-black uppercase" key={item}>{item}</div>

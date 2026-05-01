@@ -3,9 +3,11 @@ import { vehicleTypes as pricedVehicleTypes } from "./pricing";
 import { timeSlots } from "./schedule";
 
 export const bookingServices = [
-  "Simple Detail",
+  "Exterior Detail",
+  "Interior Full Detail",
   "Full Detail",
   "Deep Detail",
+  "Headlight Restoration",
   "Ceramic Coating",
   "Window Tint",
   "Paint Correction",

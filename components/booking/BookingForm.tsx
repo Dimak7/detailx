@@ -6,6 +6,7 @@ import { fireBookingConversion } from "@/lib/gtag";
 import { trackBookingLead } from "@/lib/metaPixel";
 import {
   buildBookingEstimate,
+  freeWaxBonusLabel,
   getStartingPriceLabel,
   vehicleTypes,
   type PricedService,
@@ -31,6 +32,7 @@ type BookingConfirmation = {
   time: string;
   location: string;
   estimatedTotal: string;
+  bonusIncluded: boolean;
   emailSent: boolean;
 };
 
@@ -178,6 +180,7 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
         time: selectedTime,
         location: String(payload.address || ""),
         estimatedTotal: estimatedPrice,
+        bonusIncluded: bookingEstimate.bonusIncluded,
         emailSent: result.status === "booking_saved_email_sent" || Boolean(result.emailSent),
       });
       (formRef.current ?? form)?.reset();
@@ -303,12 +306,17 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
             <div className="flex min-w-0 items-start justify-between gap-4 rounded-lg bg-white px-4 py-3" key={detail.lineNumber}>
               <div className="min-w-0">
                 <p className="font-black uppercase leading-tight">Detail {detail.lineNumber}: {detail.service}</p>
-                <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}{detail.discountPercent ? ` / ${detail.discountPercent}% off` : ""}</p>
+                <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}</p>
               </div>
               <p className="shrink-0 text-right font-black text-ink">{detail.estimatedPrice}</p>
             </div>
           ))}
         </div>
+        {bookingEstimate.bonusIncluded ? (
+          <div className="mt-3 rounded-lg border border-red/20 bg-red-soft px-4 py-3 text-sm font-black uppercase text-ink">
+            Bonus: {freeWaxBonusLabel}
+          </div>
+        ) : null}
         <div className="mt-3 flex items-center justify-between rounded-lg bg-ink px-4 py-4 text-white">
           <span className="text-sm font-black uppercase text-ash">Total estimate</span>
           <span className="text-2xl font-black">{bookingEstimate.estimatedPrice}</span>
@@ -388,6 +396,7 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
         <label className="form-label">Phone<input className="field" name="phone" required placeholder="Your phone number" /></label>
         <label className="form-label">Email<input className="field" name="email" type="email" required placeholder="you@email.com" /></label>
         <label className="form-label">Service location<input className="field" name="address" minLength={5} required placeholder="Chicago address or neighborhood" /></label>
+        <label className="form-label md:col-span-2">Car make/model (optional)<input className="field" name="carModel" maxLength={120} placeholder="BMW X3 / Honda Civic / Ford Transit" /></label>
       </div>
       <label className="form-label mt-4">Optional notes<textarea className="field min-h-28 resize-y" name="notes" maxLength={800} placeholder="Parking access, pet hair, stains, coating goals, tint questions..." /></label>
       <button className="mt-5 w-full rounded-lg bg-red px-6 py-4 font-black uppercase text-white shadow-[0_16px_42px_rgba(193,18,31,0.25)] transition hover:-translate-y-0.5 hover:bg-red-dark disabled:cursor-not-allowed disabled:opacity-60" disabled={loading} type="submit">
@@ -482,13 +491,18 @@ function BookingConfirmationOverlay({
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-black uppercase leading-tight">Detail {detail.lineNumber}: {detail.service}</p>
-                        <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}{detail.discountPercent ? ` / ${detail.discountPercent}% off` : ""}</p>
+                        <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}</p>
                       </div>
                       <p className="text-right font-black">{detail.estimatedPrice}</p>
                     </div>
                   </div>
                 ))}
               </div>
+              {confirmation.bonusIncluded ? (
+                <div className="mt-4 rounded-lg border border-red/20 bg-red-soft px-4 py-3 text-sm font-black uppercase text-ink">
+                  Bonus: {freeWaxBonusLabel}
+                </div>
+              ) : null}
               <div className="mt-4 grid gap-2 rounded-lg border border-ink/10 p-4 text-sm font-bold text-steel">
                 <div className="flex justify-between gap-4"><span>Date</span><span className="text-right text-ink">{confirmation.date}</span></div>
                 <div className="flex justify-between gap-4"><span>Time</span><span className="text-right text-ink">{confirmation.time}</span></div>

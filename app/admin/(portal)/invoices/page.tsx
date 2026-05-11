@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminActionForm } from "@/components/admin/AdminActionForm";
 import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
 import { formatMoney } from "@/lib/adminData";
 import { listInvoices } from "@/lib/invoiceStore";
@@ -32,19 +33,23 @@ export default async function AdminInvoicesPage({ searchParams }: { searchParams
                 <p className="mt-2 text-sm font-bold text-steel">{invoice.customerEmail} / {formatMoney(invoice.amount)}</p>
                 {invoice.paymentUrl ? <a className="mt-3 inline-flex text-sm font-black uppercase text-red" href={invoice.paymentUrl} target="_blank" rel="noreferrer">Open payment link</a> : null}
               </div>
-              <form className="flex flex-wrap gap-2" action="/api/admin/actions" method="post">
-                <input type="hidden" name="action" value="update-invoice-status" />
-                <input type="hidden" name="invoiceId" value={invoice.id} />
-                <input type="hidden" name="returnTo" value="/admin/invoices" />
-                <select className="admin-input" name="status" defaultValue={invoice.status}>
-                  <option value="draft">draft</option>
-                  <option value="sent">sent</option>
-                  <option value="paid">paid</option>
-                  <option value="overdue">overdue</option>
-                  <option value="cancelled">cancelled</option>
-                </select>
-                <button className="rounded-lg bg-ink px-4 py-3 text-sm font-black uppercase text-white" type="submit">Update</button>
-              </form>
+              <AdminActionForm className="flex flex-wrap gap-2">
+                {({ pending }) => (
+                  <>
+                    <input type="hidden" name="action" value="update-invoice-status" />
+                    <input type="hidden" name="invoiceId" value={invoice.id} />
+                    <input type="hidden" name="returnTo" value="/admin/invoices" />
+                    <select className="admin-input" name="status" defaultValue={invoice.status}>
+                      <option value="draft">draft</option>
+                      <option value="sent">sent</option>
+                      <option value="paid">paid</option>
+                      <option value="overdue">overdue</option>
+                      <option value="cancelled">cancelled</option>
+                    </select>
+                    <button className="rounded-lg bg-ink px-4 py-3 text-sm font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Updating..." : "Update"}</button>
+                  </>
+                )}
+              </AdminActionForm>
             </div>
           </article>
         )) : (

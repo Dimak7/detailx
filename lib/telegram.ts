@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { assertFutureDate, bookingServices, type BookingInput } from "./bookingSchema";
 import { listBookingsByDate, listScheduleBlocks, saveBooking, type BookingStatus, type StoredBooking } from "./bookingStore";
-import { buildBookingEstimate, getTelegramPriceLabel, vehicleTypes, type BookingService, type PricedService, type VehicleType } from "./pricing";
+import { buildBookingEstimate, freeWaxBonusLabel, getTelegramPriceLabel, hasFreeWaxBonus, vehicleTypes, type BookingService, type PricedService, type VehicleType } from "./pricing";
 import { isTimeSlot, parseTimeSlotToMinutes, timeSlots, type TimeSlot } from "./schedule";
 import { getPricedServices, updateServicePricing } from "./servicePricingStore";
 import {
@@ -451,10 +451,12 @@ async function confirmManualBooking(chatId: string): Promise<TelegramActionResul
     phone: data.phone,
     email: "",
     vehicleType: data.vehicleType,
+    carModel: "",
     address: data.address,
     notes: data.notes || "",
     estimatedPrice: data.price || estimate.estimatedPrice,
     details: estimate.details,
+    durationHours: 2,
     source: "telegram_manual",
   };
 
@@ -617,6 +619,7 @@ async function buildTelegramBookingMessage(booking: TelegramBooking) {
     `<b>Name:</b> ${escapeTelegramHtml(booking.name)}`,
     `<b>Phone:</b> ${escapeTelegramHtml(booking.phone)}`,
     `<b>Email:</b> ${escapeTelegramHtml(booking.email || "N/A")}`,
+    ...(booking.carModel ? [`<b>Car:</b> ${escapeTelegramHtml(booking.carModel)}`] : []),
     `<b>Date:</b> ${escapeTelegramHtml(booking.date)}`,
     `<b>Time:</b> ${escapeTelegramHtml(booking.time)}`,
     `<b>Location:</b> ${escapeTelegramHtml(booking.address)}`,
@@ -625,9 +628,10 @@ async function buildTelegramBookingMessage(booking: TelegramBooking) {
       `<b>Detail ${detail.lineNumber}</b>`,
       `Service: ${escapeTelegramHtml(detail.service)}`,
       `Vehicle: ${escapeTelegramHtml(detail.vehicleType)}`,
-      `Price: ${escapeTelegramHtml(detail.estimatedPrice)}${detail.discountPercent ? " / 10% off" : ""}`,
+      `Price: ${escapeTelegramHtml(detail.estimatedPrice)}`,
       "",
     ]),
+    ...(hasFreeWaxBonus(estimate.details) ? [`<b>Bonus:</b> ${escapeTelegramHtml(freeWaxBonusLabel)}`, ""] : []),
     `<b>Total:</b> ${escapeTelegramHtml(booking.estimatedPrice || estimate.estimatedPrice)}`,
     `<b>Notes:</b> ${escapeTelegramHtml(notes)}`,
     `<b>Status:</b> ${formatStatus(booking.status || "pending")}`,
@@ -649,8 +653,10 @@ function buildTodayScheduleMessage(bookings: StoredBooking[], blocks: Awaited<Re
     ...activeBookings.flatMap((booking) => [
       `${escapeTelegramHtml(booking.time)} - ${escapeTelegramHtml(booking.name)}`,
       `Phone: ${escapeTelegramHtml(booking.phone)}`,
+      ...(booking.carModel ? [`Car: ${escapeTelegramHtml(booking.carModel)}`] : []),
       `Address: ${escapeTelegramHtml(booking.address)}`,
       `Price: ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
+      ...(hasFreeWaxBonus(booking.details?.length ? booking.details : [{ service: booking.service }]) ? [`Bonus: ${escapeTelegramHtml(freeWaxBonusLabel)}`] : []),
       "",
     ]),
     ...(sortedBlocks.length

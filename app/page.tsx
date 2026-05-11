@@ -184,10 +184,12 @@ function Gallery() {
           </div>
           <p className="max-w-sm text-sm font-bold uppercase tracking-[0.08em] text-ash">Recent finishes, interiors, gloss, and correction work.</p>
         </div>
-        <div className="flex snap-x gap-4 overflow-x-auto pb-4 md:grid md:auto-rows-[170px] md:grid-cols-6 md:overflow-visible md:pb-0">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {galleryImages.map((image, index) => (
-            <figure className={`group relative h-[320px] min-w-[78vw] snap-center overflow-hidden rounded-lg md:h-auto md:min-w-0 ${getGalleryTileClass(index)}`} key={image.src}>
-              <Image src={image.src} alt={image.alt} fill className="object-cover transition duration-500 group-hover:scale-105" sizes="(min-width: 768px) 40vw, 100vw" />
+            <figure className={`group relative overflow-hidden rounded-lg border border-white/10 bg-white/5 ${getGalleryTileClass(index)}`} key={image.src}>
+              <div className="relative aspect-[4/5]">
+                <Image src={image.src} alt={image.alt} fill className="object-cover object-center transition duration-500 group-hover:scale-105" sizes="(min-width: 1280px) 24vw, (min-width: 768px) 45vw, 100vw" />
+              </div>
             </figure>
           ))}
         </div>
@@ -253,7 +255,7 @@ function Booking({ pricedServices }: { pricedServices: Awaited<ReturnType<typeof
       <div className="content-shell grid min-w-0 gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
         <div className="min-w-0">
           <div className="mb-5 inline-flex rounded-lg border border-red/45 bg-red/15 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-soft">
-            Add another detail - get 10% off
+            Book 2 details and get a free wax
           </div>
           <p className="eyebrow">Reservations</p>
           <h2 className="mt-4 text-4xl font-black uppercase leading-none md:text-6xl">Pick the tier. We bring the finish.</h2>
@@ -316,15 +318,19 @@ function Instagram() {
 
 function getGalleryTileClass(index: number) {
   const classes = [
-    "md:col-span-3 md:row-span-3",
-    "md:col-span-3 md:row-span-2",
-    "md:col-span-2 md:row-span-2",
-    "md:col-span-2 md:row-span-3",
-    "md:col-span-2 md:row-span-2",
-    "md:col-span-4 md:row-span-2",
+    "xl:col-span-2",
+    "",
+    "",
+    "",
+    "",
+    "xl:col-span-2",
+    "",
+    "",
+    "",
+    "",
   ];
 
-  return classes[index] ?? "md:col-span-2 md:row-span-2";
+  return classes[index] ?? "";
 }
 
 function Faq() {

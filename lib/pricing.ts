@@ -243,7 +243,10 @@ export type BookingEstimate = {
   totalAmount: number;
   hasStartingAtPricing: boolean;
   discountApplied: boolean;
+  bonusIncluded: boolean;
 };
+
+export const freeWaxBonusLabel = "Free wax included";
 
 export function resolvePricedServices(overrides: Partial<Record<BookingService, ServicePriceOverride>> = {}) {
   return basePricedServices.map((service) => {
@@ -310,17 +313,17 @@ export function getPriceQuote(
     isStartingAt = true;
   }
 
-  const discountedAmount = Math.round(amount * (1 - discountPercent / 100));
-  const priceLabel = isDiscussionOnly ? "To be discussed" : formatPrice(discountedAmount, isStartingAt);
+  const fullAmount = amount;
+  const priceLabel = isDiscussionOnly ? "To be discussed" : formatPrice(fullAmount, isStartingAt);
   const baseLabel = isDiscussionOnly ? "To be discussed" : formatPrice(amount, isStartingAt);
 
   return {
-    amount: discountedAmount,
+    amount: fullAmount,
     label: priceLabel,
     baseLabel,
     isStartingAt,
     isDiscussionOnly,
-    discountPercent,
+    discountPercent: 0,
   };
 }
 
@@ -367,7 +370,7 @@ export function getTelegramPriceLabel(service: PricedService) {
 
 export function buildBookingEstimate(details: BookingDetailSelection[], services: readonly PricedService[] = pricedServices): BookingEstimate {
   const normalizedDetails = details.map((detail, index) => {
-    const discountPercent = index > 0 ? 10 : 0;
+    const discountPercent = 0;
     const quote = getPriceQuote(detail.service, detail.vehicleType, discountPercent, services);
 
     return {
@@ -391,8 +394,13 @@ export function buildBookingEstimate(details: BookingDetailSelection[], services
     estimatedPrice: hasDiscussionPricing ? "To be discussed" : formatPrice(totalAmount, hasStartingAtPricing),
     totalAmount,
     hasStartingAtPricing,
-    discountApplied: normalizedDetails.length > 1,
+    discountApplied: false,
+    bonusIncluded: normalizedDetails.length >= 2,
   };
+}
+
+export function hasFreeWaxBonus(details: Array<{ service: string }>) {
+  return details.length >= 2;
 }
 
 function formatPrice(amount: number, isStartingAt: boolean) {

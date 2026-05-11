@@ -48,6 +48,25 @@ export function parseTimeSlotToMinutes(value: string) {
   return hour * 60 + minute;
 }
 
+export function formatMinutesToTime(value: number) {
+  const normalized = ((value % (24 * 60)) + (24 * 60)) % (24 * 60);
+  const hour24 = Math.floor(normalized / 60);
+  const minute = normalized % 60;
+  const period = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 || 12;
+  return `${hour12}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+export function addHoursToTimeSlot(time: string, hours: number) {
+  const minutes = parseTimeSlotToMinutes(time);
+
+  if (minutes === null) {
+    return time;
+  }
+
+  return formatMinutesToTime(minutes + Math.max(0, hours) * 60);
+}
+
 export function isSlotWithinRange(slot: string, startTime: string, endTime: string) {
   const slotMinutes = parseTimeSlotToMinutes(slot);
   const startMinutes = parseTimeSlotToMinutes(startTime);

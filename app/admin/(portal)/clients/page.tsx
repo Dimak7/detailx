@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 const promotionTemplates: PromotionTemplate[] = [
   {
-    label: "10% off",
-    subject: "10% off your next DETAILX Chicago detail",
-    message: "We'd love to detail your vehicle again. Use this note for 10% off your next DETAILX Chicago appointment.",
+    label: "Free wax",
+    subject: "Book 2 details and get a free wax",
+    message: "Book 2 details with DETAILX Chicago and we will include a free wax with your appointment.",
   },
   {
     label: "Rebook",

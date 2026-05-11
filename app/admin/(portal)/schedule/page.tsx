@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
+import { AdminActionForm } from "@/components/admin/AdminActionForm";
 import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
 import { getBookingDetails, addDays, getDateString } from "@/lib/adminData";
 import { getAvailability, getNextTimeSlot, listBookingsByDate, listScheduleBlocks } from "@/lib/bookingStore";
@@ -37,21 +38,25 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         <button className="rounded-lg bg-ink px-5 py-3 font-black uppercase text-white" type="submit">Open</button>
       </form>
 
-      <form className="mb-5 grid gap-3 rounded-lg bg-ink p-4 text-white ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_1fr_1.4fr_auto]" action="/api/admin/actions" method="post">
-        <input type="hidden" name="action" value="block-slot" />
-        <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-        <select className="admin-input" name="date">
-          {dates.map((scheduleDate) => <option key={scheduleDate} value={scheduleDate}>{scheduleDate}</option>)}
-        </select>
-        <select className="admin-input" name="startTime" defaultValue="10:00 AM">
-          {timeSlots.map((time) => <option key={time} value={time}>Start {formatTime24(time)} / {time}</option>)}
-        </select>
-        <select className="admin-input" name="endTime" defaultValue="12:00 PM">
-          {endTimeSlots.map((time) => <option key={time} value={time}>End {formatTime24(time)} / {time}</option>)}
-        </select>
-        <input className="admin-input" name="reason" placeholder="Reason, e.g. personal / unavailable" />
-        <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white" type="submit">Block Hours</button>
-      </form>
+      <AdminActionForm className="mb-5 grid gap-3 rounded-lg bg-ink p-4 text-white ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
+        {({ pending }) => (
+          <>
+            <input type="hidden" name="action" value="block-slot" />
+            <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+            <select className="admin-input" name="date">
+              {dates.map((scheduleDate) => <option key={scheduleDate} value={scheduleDate}>{scheduleDate}</option>)}
+            </select>
+            <select className="admin-input" name="startTime" defaultValue="10:00 AM">
+              {timeSlots.map((time) => <option key={time} value={time}>Start {formatTime24(time)} / {time}</option>)}
+            </select>
+            <select className="admin-input" name="endTime" defaultValue="12:00 PM">
+              {endTimeSlots.map((time) => <option key={time} value={time}>End {formatTime24(time)} / {time}</option>)}
+            </select>
+            <input className="admin-input" name="reason" placeholder="Reason, e.g. personal / unavailable" />
+            <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Blocking..." : "Block Hours"}</button>
+          </>
+        )}
+      </AdminActionForm>
 
       <section className="overflow-x-auto rounded-lg bg-white shadow-sm ring-1 ring-ink/10">
         <div
@@ -88,6 +93,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                           <StatusBadge status={booking.status} />
                         </div>
                         <p className="mt-2 text-xs font-black uppercase">{time}</p>
+                        {booking.carModel ? <p className="mt-1 text-[11px] font-bold uppercase opacity-80">{booking.carModel}</p> : null}
                         <p className="mt-1 text-xs font-bold leading-5 opacity-80">{services}</p>
                       </Link>
                     ) : block ? (
@@ -99,12 +105,16 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                         <p className="mt-2 text-xs font-black uppercase text-red-soft">{block.startTime || block.time} - {block.endTime || getNextTimeSlot(block.time)}</p>
                         <p className="mt-2 text-xs font-bold text-ash">{block.reason}</p>
                         {isBlockStart ? (
-                          <form className="mt-3" action="/api/admin/actions" method="post">
-                            <input type="hidden" name="action" value="remove-block" />
-                            <input type="hidden" name="blockId" value={block.id} />
-                            <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-                            <button className="text-xs font-black uppercase text-red-soft" type="submit">Remove</button>
-                          </form>
+                          <AdminActionForm className="mt-3" refreshOnSuccess>
+                            {({ pending }) => (
+                              <>
+                                <input type="hidden" name="action" value="remove-block" />
+                                <input type="hidden" name="blockId" value={block.id} />
+                                <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+                                <button className="text-xs font-black uppercase text-red-soft disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Removing..." : "Remove"}</button>
+                              </>
+                            )}
+                          </AdminActionForm>
                         ) : null}
                       </div>
                     ) : (
@@ -131,20 +141,24 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         <div className="mt-4 grid gap-3">
           {schedule.flatMap((day) => day.blocks.map((block) => ({ ...block, date: day.date }))).length ? (
             schedule.flatMap((day) => day.blocks.map((block) => (
-              <form className="grid gap-3 rounded-lg bg-smoke p-3 md:grid-cols-[1fr_1fr_1fr_1.3fr_auto]" action="/api/admin/actions" method="post" key={block.id}>
-                <input type="hidden" name="action" value="update-block" />
-                <input type="hidden" name="blockId" value={block.id} />
-                <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-                <input className="admin-input" name="date" type="date" defaultValue={day.date} />
-                <select className="admin-input" name="startTime" defaultValue={block.startTime || block.time}>
-                  {timeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
-                </select>
-                <select className="admin-input" name="endTime" defaultValue={block.endTime || getNextTimeSlot(block.time)}>
-                  {endTimeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
-                </select>
-                <input className="admin-input" name="reason" defaultValue={block.reason} />
-                <button className="rounded-lg bg-ink px-4 py-3 text-xs font-black uppercase text-white" type="submit">Save</button>
-              </form>
+              <AdminActionForm className="grid gap-3 rounded-lg bg-smoke p-3 md:grid-cols-[1fr_1fr_1fr_1.3fr_auto]" key={block.id}>
+                {({ pending }) => (
+                  <>
+                    <input type="hidden" name="action" value="update-block" />
+                    <input type="hidden" name="blockId" value={block.id} />
+                    <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+                    <input className="admin-input" name="date" type="date" defaultValue={day.date} />
+                    <select className="admin-input" name="startTime" defaultValue={block.startTime || block.time}>
+                      {timeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+                    </select>
+                    <select className="admin-input" name="endTime" defaultValue={block.endTime || getNextTimeSlot(block.time)}>
+                      {endTimeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+                    </select>
+                    <input className="admin-input" name="reason" defaultValue={block.reason} />
+                    <button className="rounded-lg bg-ink px-4 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Saving..." : "Save"}</button>
+                  </>
+                )}
+              </AdminActionForm>
             )))
           ) : (
             <div className="rounded-lg bg-smoke p-4 text-sm font-bold text-steel">No blocked hours in this view.</div>

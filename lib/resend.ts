@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import type { BookingInput } from "./bookingSchema";
-import { buildBookingEstimate } from "./pricing";
+import { buildBookingEstimate, freeWaxBonusLabel, hasFreeWaxBonus } from "./pricing";
 
 type BookingEmail = BookingInput & { id: string };
 
@@ -186,6 +186,8 @@ function buildCustomerEmailHtml(booking: BookingEmail) {
             ${buildSummaryLine("Date", booking.date)}
             ${buildSummaryLine("Time", booking.time)}
             ${buildSummaryLine("Location", booking.address)}
+            ${booking.carModel ? buildSummaryLine("Car make/model", booking.carModel) : ""}
+            ${hasFreeWaxBonus(detailItems) ? buildSummaryLine("Bonus", freeWaxBonusLabel) : ""}
             ${notes.length ? buildSummaryLine("Notes", notes.join(" | ")) : ""}
             ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
           </div>
@@ -229,6 +231,8 @@ function buildBusinessEmailHtml(booking: BookingEmail) {
             ${buildSummaryLine("Date", booking.date)}
             ${buildSummaryLine("Time", booking.time)}
             ${buildSummaryLine("Location", booking.address)}
+            ${booking.carModel ? buildSummaryLine("Car make/model", booking.carModel) : ""}
+            ${hasFreeWaxBonus(detailItems) ? buildSummaryLine("Bonus", freeWaxBonusLabel) : ""}
             ${notes.length ? buildSummaryLine("Notes", notes.join(" | ")) : ""}
             ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
           </div>
@@ -252,6 +256,8 @@ function buildGoogleCalendarUrl(booking: BookingEmail) {
   const detailItems = getEmailDetailItems(booking);
   const details = [
     ...detailItems.map((detail) => `Detail ${detail.lineNumber}: ${detail.service} / ${detail.vehicleType} / ${detail.estimatedPrice}`),
+    ...(booking.carModel ? [`Car make/model: ${booking.carModel}`] : []),
+    ...(hasFreeWaxBonus(detailItems) ? [`Bonus: ${freeWaxBonusLabel}`] : []),
     `Estimated price: ${booking.estimatedPrice || "Estimate pending"}`,
     `Booking ID: ${booking.id}`,
   ].join("\n");
@@ -276,11 +282,9 @@ function getEmailDetailItems(booking: BookingEmail) {
 }
 
 function buildEmailDetailRow(detail: ReturnType<typeof getEmailDetailItems>[number]) {
-  const discount = detail.discountPercent ? ` / ${detail.discountPercent}% off` : "";
-
   return `
     <div style="border-bottom:1px solid #e4e4df;padding:16px">
-      <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">Detail ${detail.lineNumber}${discount}</p>
+      <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">Detail ${detail.lineNumber}</p>
       <p style="margin:6px 0 0;color:#050506;font-size:17px;font-weight:900">${escapeHtml(detail.service)} / ${escapeHtml(detail.vehicleType)}</p>
       <p style="margin:4px 0 0;color:#c1121f;font-size:14px;font-weight:900">${escapeHtml(detail.estimatedPrice)}</p>
     </div>

@@ -29,10 +29,12 @@ export const bookingSchema = z.object({
   name: z.string().trim().min(2, "Name is required.").max(120),
   phone: z.string().trim().min(7, "Phone number is required.").max(30),
   email: z.union([z.email("Enter a valid email address.").max(180), z.literal("")]).optional().default(""),
+  carModel: z.string().trim().max(120).optional().default(""),
   vehicleType: z.enum(vehicleTypes),
   address: z.string().trim().min(5, "Service location is required.").max(240),
   estimatedPrice: z.string().trim().max(80).optional().default(""),
   notes: z.string().trim().max(800).optional().default(""),
+  durationHours: z.number().int().min(2).max(12).optional().default(2),
   details: z.array(bookingDetailSchema).min(1).max(6).optional(),
   source: z.enum(["website", "telegram_manual", "admin_manual"]).optional().default("website"),
 });

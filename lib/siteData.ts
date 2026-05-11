@@ -45,27 +45,43 @@ export function buildServiceTiers(pricedServices: readonly PricedService[]): Ser
 export const galleryImages = [
   {
     src: "/brand/detailx-work/black-porsche-driveway.jpg",
-    alt: "Black Porsche in a driveway after DETAILX Chicago detailing",
+    alt: "DETAILX Chicago mobile detailing result.",
   },
   {
     src: "/brand/detailx-work/white-bmw-interior.jpg",
-    alt: "Detailed BMW interior with white performance seats",
+    alt: "DETAILX Chicago mobile detailing result.",
   },
   {
     src: "/brand/detailx-work/black-mercedes-rear.jpg",
-    alt: "Black Mercedes rear finish under studio lighting",
+    alt: "DETAILX Chicago mobile detailing result.",
   },
   {
     src: "/brand/detailx-work/mercedes-tail-light.jpg",
-    alt: "Mercedes tail light and polished rear detail",
+    alt: "DETAILX Chicago mobile detailing result.",
   },
   {
     src: "/brand/detailx-work/audi-puddle-light.jpg",
-    alt: "Audi puddle light detail after service",
+    alt: "DETAILX Chicago mobile detailing result.",
   },
   {
     src: "/brand/detailx-work/red-audi-foam.jpg",
-    alt: "Foam wash during a DETAILX Chicago appointment",
+    alt: "DETAILX Chicago mobile detailing result.",
+  },
+  {
+    src: "/brand/detailx-work/bmw-skyline-result.jpg",
+    alt: "DETAILX Chicago mobile detailing result.",
+  },
+  {
+    src: "/brand/detailx-work/audi-interior-result.jpg",
+    alt: "DETAILX Chicago mobile detailing result.",
+  },
+  {
+    src: "/brand/detailx-work/ford-super-duty-result.jpg",
+    alt: "DETAILX Chicago mobile detailing result.",
+  },
+  {
+    src: "/brand/detailx-work/black-bmw-foam-result.jpg",
+    alt: "DETAILX Chicago mobile detailing result.",
   },
 ];
 

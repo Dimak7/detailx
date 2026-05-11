@@ -1,7 +1,9 @@
+import { AdminActionForm as AsyncAdminActionForm } from "@/components/admin/AdminActionForm";
 import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
 import { InvoiceCreateButton } from "@/components/admin/InvoiceCreateButton";
 import { getBookingDetails } from "@/lib/adminData";
 import { listBookings, type BookingStatus } from "@/lib/bookingStore";
+import { freeWaxBonusLabel, hasFreeWaxBonus } from "@/lib/pricing";
 import { getPricedServices } from "@/lib/servicePricingStore";
 import { timeSlots } from "@/lib/schedule";
 
@@ -56,28 +58,34 @@ export default async function AdminBookingsPage({ searchParams }: { searchParams
                 <h2 className="mt-3 text-2xl font-black uppercase leading-none">{booking.name}</h2>
                 <p className="mt-2 text-sm font-bold text-steel">{booking.date} / {booking.time} / {booking.estimatedPrice || "Estimate pending"}</p>
                 <p className="mt-2 text-sm text-steel">{booking.phone} / {booking.email}</p>
+                {booking.carModel ? <p className="mt-1 text-sm text-steel">Car: {booking.carModel}</p> : null}
                 <p className="mt-2 text-sm text-steel">{booking.address}</p>
                 <div className="mt-4 grid gap-2">
                   {getBookingDetails(booking).map((detail) => (
                     <div className="rounded-lg bg-smoke px-4 py-3" key={detail.lineNumber}>
                       <p className="font-black uppercase">Detail {detail.lineNumber}: {detail.service}</p>
-                      <p className="text-sm font-bold text-steel">{detail.vehicleType} / {detail.estimatedPrice}{detail.discountPercent ? ` / ${detail.discountPercent}% off` : ""}</p>
+                      <p className="text-sm font-bold text-steel">{detail.vehicleType} / {detail.estimatedPrice}</p>
                     </div>
                   ))}
                 </div>
+                {hasFreeWaxBonus(getBookingDetails(booking)) ? <p className="mt-3 text-sm font-black uppercase text-red">Bonus: {freeWaxBonusLabel}</p> : null}
               </div>
               <div className="grid gap-3">
-                <AdminActionForm bookingId={booking.id} returnTo={returnTo} />
-                <form className="grid gap-2 rounded-lg bg-smoke p-3" action="/api/admin/actions" method="post">
-                  <input type="hidden" name="action" value="reschedule-booking" />
-                  <input type="hidden" name="bookingId" value={booking.id} />
-                  <input type="hidden" name="returnTo" value={returnTo} />
-                  <input className="admin-input" name="date" type="date" defaultValue={booking.date} required />
-                  <select className="admin-input" name="time" defaultValue={booking.time} required>
-                    {timeSlots.map((time) => <option key={time} value={time}>{time}</option>)}
-                  </select>
-                  <button className="rounded-lg border border-ink/10 px-4 py-3 text-sm font-black uppercase" type="submit">Reschedule</button>
-                </form>
+                <BookingStatusActions bookingId={booking.id} returnTo={returnTo} />
+                <AsyncAdminActionForm className="grid gap-2 rounded-lg bg-smoke p-3">
+                  {({ pending }) => (
+                    <>
+                      <input type="hidden" name="action" value="reschedule-booking" />
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <input type="hidden" name="returnTo" value={returnTo} />
+                      <input className="admin-input" name="date" type="date" defaultValue={booking.date} required />
+                      <select className="admin-input" name="time" defaultValue={booking.time} required>
+                        {timeSlots.map((time) => <option key={time} value={time}>{time}</option>)}
+                      </select>
+                      <button className="rounded-lg border border-ink/10 px-4 py-3 text-sm font-black uppercase disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Rescheduling..." : "Reschedule"}</button>
+                    </>
+                  )}
+                </AsyncAdminActionForm>
               </div>
             </div>
           </article>
@@ -87,24 +95,32 @@ export default async function AdminBookingsPage({ searchParams }: { searchParams
   );
 }
 
-function AdminActionForm({ bookingId, returnTo }: { bookingId: string; returnTo: string }) {
+function BookingStatusActions({ bookingId, returnTo }: { bookingId: string; returnTo: string }) {
   return (
     <div className="grid gap-2 rounded-lg bg-smoke p-3">
       {["confirmed", "cancelled", "completed"].map((status) => (
-        <form action="/api/admin/actions" method="post" key={status}>
-          <input type="hidden" name="action" value="update-booking-status" />
-          <input type="hidden" name="bookingId" value={bookingId} />
-          <input type="hidden" name="status" value={status} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <button className="w-full rounded-lg bg-ink px-4 py-3 text-sm font-black uppercase text-white" type="submit">Mark {status}</button>
-        </form>
+        <AsyncAdminActionForm key={status}>
+          {({ pending }) => (
+            <>
+              <input type="hidden" name="action" value="update-booking-status" />
+              <input type="hidden" name="bookingId" value={bookingId} />
+              <input type="hidden" name="status" value={status} />
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <button className="w-full rounded-lg bg-ink px-4 py-3 text-sm font-black uppercase text-white disabled:cursor-not-allowed disabled:bg-steel" disabled={pending} type="submit">{pending ? "Saving..." : `Mark ${status}`}</button>
+            </>
+          )}
+        </AsyncAdminActionForm>
       ))}
-      <form action="/api/admin/actions" method="post">
-        <input type="hidden" name="action" value="resend-email" />
-        <input type="hidden" name="bookingId" value={bookingId} />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <button className="w-full rounded-lg border border-ink/10 bg-white px-4 py-3 text-sm font-black uppercase" type="submit">Resend Email</button>
-      </form>
+      <AsyncAdminActionForm>
+        {({ pending }) => (
+          <>
+            <input type="hidden" name="action" value="resend-email" />
+            <input type="hidden" name="bookingId" value={bookingId} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <button className="w-full rounded-lg border border-ink/10 bg-white px-4 py-3 text-sm font-black uppercase disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Sending..." : "Resend Email"}</button>
+          </>
+        )}
+      </AsyncAdminActionForm>
       <InvoiceCreateButton bookingId={bookingId} returnTo={returnTo} />
     </div>
   );

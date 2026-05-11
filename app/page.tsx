@@ -3,7 +3,10 @@ import { Suspense } from "react";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { Nav } from "@/components/Nav";
 import { ServiceMenu } from "@/components/ServiceMenu";
-import { galleryImages, processSteps, reasons, services, testimonials } from "@/lib/siteData";
+import { getPricedServices } from "@/lib/servicePricingStore";
+import { buildServiceTiers, galleryImages, processSteps, reasons, testimonials } from "@/lib/siteData";
+
+export const dynamic = "force-dynamic";
 
 const googleBusinessUrl = "https://share.google/KsLW0nq1eJoenaYYe";
 
@@ -21,14 +24,17 @@ const faqItems = [
   ["Can I request coating or paint correction online?", "Yes. Start with the reservation form and we will confirm the prep level, timing, and final scope before work begins."],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const pricedServices = await getPricedServices();
+  const services = buildServiceTiers(pricedServices);
+
   return (
     <main className="overflow-hidden bg-smoke">
       <Nav />
       <Hero />
-      <Booking />
+      <Booking pricedServices={pricedServices} />
       <ProofStrip />
-      <FeaturedServices />
+      <FeaturedServices services={services} />
       <Difference />
       <Gallery />
       <Process />
@@ -111,7 +117,7 @@ function ProofStrip() {
   );
 }
 
-function FeaturedServices() {
+function FeaturedServices({ services }: { services: Parameters<typeof ServiceMenu>[0]["services"] }) {
   return (
     <section className="section-pad content-shell" id="services">
       <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
@@ -241,7 +247,7 @@ function Testimonials() {
   );
 }
 
-function Booking() {
+function Booking({ pricedServices }: { pricedServices: Awaited<ReturnType<typeof getPricedServices>> }) {
   return (
     <section className="section-pad bg-[linear-gradient(135deg,var(--ink),var(--charcoal))] text-white" id="booking">
       <div className="content-shell grid min-w-0 gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
@@ -259,7 +265,7 @@ function Booking() {
           </div>
         </div>
         <Suspense fallback={null}>
-          <BookingForm />
+          <BookingForm initialServices={pricedServices} />
         </Suspense>
       </div>
     </section>

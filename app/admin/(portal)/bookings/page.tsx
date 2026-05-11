@@ -2,13 +2,14 @@ import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/A
 import { InvoiceCreateButton } from "@/components/admin/InvoiceCreateButton";
 import { getBookingDetails } from "@/lib/adminData";
 import { listBookings, type BookingStatus } from "@/lib/bookingStore";
-import { pricedServices } from "@/lib/pricing";
+import { getPricedServices } from "@/lib/servicePricingStore";
 import { timeSlots } from "@/lib/schedule";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBookingsPage({ searchParams }: { searchParams?: Promise<{ date?: string; status?: BookingStatus | "all"; service?: string; search?: string; adminStatus?: string; adminMessage?: string }> }) {
   const params = await searchParams;
+  const pricedServices = await getPricedServices();
   const bookings = await listBookings({
     date: params?.date,
     status: params?.status || "all",

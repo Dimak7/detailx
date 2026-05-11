@@ -1,4 +1,4 @@
-import { getStartingPriceLabel, pricedServices } from "./pricing";
+import { getStartingPriceLabel, type PricedService } from "./pricing";
 
 export type ServiceTier = {
   title: string;
@@ -18,27 +18,29 @@ export type ServiceTier = {
   recommended: boolean;
 };
 
-export const services: ServiceTier[] = pricedServices.map((service) => {
-  const recommended = "recommended" in service ? service.recommended : false;
+export function buildServiceTiers(pricedServices: readonly PricedService[]): ServiceTier[] {
+  return pricedServices.map((service) => {
+    const recommended = "recommended" in service ? service.recommended : false;
 
-  return {
-    title: service.title,
-    code: service.code,
-    tone: service.tone,
-    description: service.description,
-    price: getStartingPriceLabel(service.title),
-    pricing: "prices" in service ? {
-      sedan: `$${service.prices.Sedan}`,
-      suv: `$${service.prices.SUV}`,
-      truck: `$${service.prices.Truck}`,
-    } : undefined,
-    includes: service.includes,
-    image: service.image,
-    category: service.category,
-    recommended: recommended ?? false,
-    ctaLabel: service.ctaLabel,
-  };
-});
+    return {
+      title: service.title,
+      code: service.code,
+      tone: service.tone,
+      description: service.description,
+      price: getStartingPriceLabel(service.title, pricedServices),
+      pricing: "prices" in service ? {
+        sedan: `$${service.prices.Sedan}`,
+        suv: `$${service.prices.SUV}`,
+        truck: `$${service.prices.Truck}`,
+      } : undefined,
+      includes: service.includes,
+      image: service.image,
+      category: service.category,
+      recommended: recommended ?? false,
+      ctaLabel: service.ctaLabel,
+    };
+  });
+}
 
 export const galleryImages = [
   {

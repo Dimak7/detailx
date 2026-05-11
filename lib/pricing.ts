@@ -1,6 +1,42 @@
 export const vehicleTypes = ["Sedan", "SUV", "Truck"] as const;
 
-export const pricedServices = [
+export type VehicleType = (typeof vehicleTypes)[number];
+const serviceTitles = [
+  "Exterior Detail",
+  "Interior Full Detail",
+  "Full Detail",
+  "Deep Detail",
+  "Headlight Restoration",
+  "Window Tint",
+  "Ceramic Coating",
+  "Paint Correction",
+] as const;
+
+export type BookingService = (typeof serviceTitles)[number];
+
+type ServiceBase = {
+  title: BookingService;
+  code: string;
+  tone: string;
+  description: string;
+  image: string;
+  category: string;
+  ctaLabel: string;
+  includes: readonly string[];
+  recommended?: boolean;
+};
+
+type VehiclePricedService = ServiceBase & {
+  prices: Record<VehicleType, number>;
+};
+
+type StartingPricedService = ServiceBase & {
+  startingPrice: number;
+};
+
+export type PricedService = VehiclePricedService | StartingPricedService;
+
+export const basePricedServices = [
   {
     title: "Exterior Detail",
     code: "EX",
@@ -157,10 +193,14 @@ export const pricedServices = [
       "Protection recommendation after correction",
     ],
   },
-] as const;
+] satisfies readonly PricedService[];
 
-export type VehicleType = (typeof vehicleTypes)[number];
-export type BookingService = (typeof pricedServices)[number]["title"];
+export const pricedServices = basePricedServices;
+
+export type ServicePriceOverride = {
+  prices?: Partial<Record<VehicleType, number>>;
+  startingPrice?: number;
+};
 
 export type BookingDetailSelection = {
   service: BookingService;
@@ -184,16 +224,46 @@ export type BookingEstimate = {
   discountApplied: boolean;
 };
 
-export function getServicePricing(service: string) {
-  return pricedServices.find((item) => item.title === service);
+export function resolvePricedServices(overrides: Partial<Record<BookingService, ServicePriceOverride>> = {}) {
+  return basePricedServices.map((service) => {
+    const override = overrides[service.title];
+
+    if (!override) {
+      return service;
+    }
+
+    if ("prices" in service) {
+      return {
+        ...service,
+        prices: {
+          ...service.prices,
+          ...(override.prices || {}),
+        },
+      };
+    }
+
+    return {
+      ...service,
+      startingPrice: override.startingPrice ?? service.startingPrice,
+    };
+  }) as PricedService[];
 }
 
-export function getEstimatedPrice(service: string, vehicleType: string) {
-  return getPriceQuote(service, vehicleType).label;
+export function getServicePricing(service: string, services: readonly PricedService[] = pricedServices) {
+  return services.find((item) => item.title === service);
 }
 
-export function getPriceQuote(service: string, vehicleType: string, discountPercent = 0) {
-  const servicePricing = getServicePricing(service);
+export function getEstimatedPrice(service: string, vehicleType: string, services: readonly PricedService[] = pricedServices) {
+  return getPriceQuote(service, vehicleType, 0, services).label;
+}
+
+export function getPriceQuote(
+  service: string,
+  vehicleType: string,
+  discountPercent = 0,
+  services: readonly PricedService[] = pricedServices
+) {
+  const servicePricing = getServicePricing(service, services);
 
   if (!servicePricing) {
     return {
@@ -226,8 +296,8 @@ export function getPriceQuote(service: string, vehicleType: string, discountPerc
   };
 }
 
-export function getStartingPriceLabel(service: string) {
-  const servicePricing = getServicePricing(service);
+export function getStartingPriceLabel(service: string, services: readonly PricedService[] = pricedServices) {
+  const servicePricing = getServicePricing(service, services);
 
   if (!servicePricing) {
     return "Estimate pending";
@@ -243,10 +313,26 @@ export function getStartingPriceLabel(service: string) {
   return `Starting at $${servicePricing.startingPrice}+`;
 }
 
-export function buildBookingEstimate(details: BookingDetailSelection[]): BookingEstimate {
+export function getTelegramPriceLabel(service: PricedService) {
+  if ("prices" in service) {
+    const prices = Object.entries(service.prices);
+    const [firstPrice] = prices.map(([, price]) => price);
+    const isFlatPrice = prices.every(([, price]) => price === firstPrice);
+
+    if (isFlatPrice) {
+      return `$${firstPrice}`;
+    }
+
+    return prices.map(([vehicle, price]) => `$${price} ${vehicle.toLowerCase()}`).join(" / ");
+  }
+
+  return `starts at $${service.startingPrice}`;
+}
+
+export function buildBookingEstimate(details: BookingDetailSelection[], services: readonly PricedService[] = pricedServices): BookingEstimate {
   const normalizedDetails = details.map((detail, index) => {
     const discountPercent = index > 0 ? 10 : 0;
-    const quote = getPriceQuote(detail.service, detail.vehicleType, discountPercent);
+    const quote = getPriceQuote(detail.service, detail.vehicleType, discountPercent, services);
 
     return {
       ...detail,

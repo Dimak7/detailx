@@ -7,8 +7,8 @@ import { trackBookingLead } from "@/lib/metaPixel";
 import {
   buildBookingEstimate,
   getStartingPriceLabel,
-  pricedServices,
   vehicleTypes,
+  type PricedService,
   type BookingDetailSelection,
   type BookingDetailEstimate,
   type BookingService,
@@ -34,13 +34,9 @@ type BookingConfirmation = {
   emailSent: boolean;
 };
 
-const initialServiceCounts = pricedServices.reduce((counts, service, index) => {
-  counts[service.title] = index === 0 ? 1 : 0;
-  return counts;
-}, {} as ServiceCounts);
-
-export function BookingForm() {
+export function BookingForm({ initialServices }: { initialServices: readonly PricedService[] }) {
   const searchParams = useSearchParams();
+  const initialServiceCounts = useMemo(() => buildInitialServiceCounts(initialServices), [initialServices]);
   const [serviceCounts, setServiceCounts] = useState<ServiceCounts>(initialServiceCounts);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>("Sedan");
   const [selectedDate, setSelectedDate] = useState("");
@@ -59,17 +55,17 @@ export function BookingForm() {
 
   const calendarDays = useMemo(() => buildCalendar(cursor), [cursor]);
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const selectedDetails = buildDetailsFromCounts(serviceCounts, selectedVehicle);
-  const bookingEstimate = buildBookingEstimate(selectedDetails);
+  const selectedDetails = buildDetailsFromCounts(serviceCounts, selectedVehicle, initialServices);
+  const bookingEstimate = buildBookingEstimate(selectedDetails, initialServices);
   const estimatedPrice = bookingEstimate.estimatedPrice;
   const totalDetails = selectedDetails.length;
-  const primaryDetail = selectedDetails[0] ?? { service: pricedServices[0].title, vehicleType: selectedVehicle };
+  const primaryDetail = selectedDetails[0] ?? { service: initialServices[0].title, vehicleType: selectedVehicle };
   const availableSlotByTime = new Map(availability.map((slot) => [slot.time, slot]));
 
   useEffect(() => {
     const requestedService = searchParams.get("service");
 
-    if (!requestedService || !pricedServices.some((service) => service.title === requestedService)) {
+    if (!requestedService || !initialServices.some((service) => service.title === requestedService)) {
       return;
     }
 
@@ -78,14 +74,14 @@ export function BookingForm() {
         return current;
       }
 
-      const next = pricedServices.reduce((counts, service) => {
+      const next = initialServices.reduce((counts, service) => {
         counts[service.title] = service.title === requestedService ? 1 : 0;
         return counts;
       }, {} as ServiceCounts);
 
       return next;
     });
-  }, [searchParams]);
+  }, [initialServices, searchParams]);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -185,7 +181,7 @@ export function BookingForm() {
         emailSent: result.status === "booking_saved_email_sent" || Boolean(result.emailSent),
       });
       (formRef.current ?? form)?.reset();
-      setServiceCounts(initialServiceCounts);
+      setServiceCounts(buildInitialServiceCounts(initialServices));
       setSelectedVehicle("Sedan");
       setAvailability([]);
       setAvailabilityError("");
@@ -250,7 +246,7 @@ export function BookingForm() {
       </div>
 
       <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {pricedServices.map((service) => {
+        {initialServices.map((service) => {
           const count = serviceCounts[service.title];
           const active = count > 0;
           return (
@@ -275,7 +271,7 @@ export function BookingForm() {
               <div className="p-4">
                 <p className={`text-xs font-black uppercase ${active ? "text-red-soft" : "text-red"}`}>{service.tone}</p>
                 <h4 className="mt-1 text-lg font-black uppercase leading-none">{service.title}</h4>
-                <p className={`mt-2 text-sm font-black ${active ? "text-white" : "text-ink"}`}>{getStartingPriceLabel(service.title)}</p>
+                <p className={`mt-2 text-sm font-black ${active ? "text-white" : "text-ink"}`}>{getStartingPriceLabel(service.title, initialServices)}</p>
               </div>
             </article>
           );
@@ -510,13 +506,20 @@ function BookingConfirmationOverlay({
   );
 }
 
-function buildDetailsFromCounts(counts: ServiceCounts, vehicleType: VehicleType): BookingDetailSelection[] {
-  return pricedServices.flatMap((service) =>
+function buildDetailsFromCounts(counts: ServiceCounts, vehicleType: VehicleType, services: readonly PricedService[]): BookingDetailSelection[] {
+  return services.flatMap((service) =>
     Array.from({ length: counts[service.title] }, () => ({
       service: service.title,
       vehicleType,
     }))
   );
+}
+
+function buildInitialServiceCounts(services: readonly PricedService[]) {
+  return services.reduce((counts, service, index) => {
+    counts[service.title] = index === 0 ? 1 : 0;
+    return counts;
+  }, {} as ServiceCounts);
 }
 
 function getDetailCount(counts: ServiceCounts) {

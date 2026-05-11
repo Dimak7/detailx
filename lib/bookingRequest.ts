@@ -4,6 +4,7 @@ import { assertFutureDate, bookingSchema } from "./bookingSchema";
 import { saveBooking } from "./bookingStore";
 import { sendBookingNotifications } from "./notifications";
 import { buildBookingEstimate } from "./pricing";
+import { getPricedServices } from "./servicePricingStore";
 import { sendTelegramBookingNotification } from "./telegram";
 
 export async function handleBookingRequest(request: Request) {
@@ -11,10 +12,11 @@ export async function handleBookingRequest(request: Request) {
     const body = await request.json();
     const booking = bookingSchema.parse(body);
     assertFutureDate(booking.date);
+    const pricedServices = await getPricedServices();
     const bookingDetails = booking.details?.length
       ? booking.details
       : [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
-    const bookingEstimate = buildBookingEstimate(bookingDetails);
+    const bookingEstimate = buildBookingEstimate(bookingDetails, pricedServices);
     const [primaryDetail] = bookingDetails;
     const pricedBooking = {
       ...booking,

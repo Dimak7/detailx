@@ -1,14 +1,22 @@
+import { revalidatePath } from "next/cache";
 import { assertFutureDate, bookingServices, type BookingInput } from "./bookingSchema";
 import { listBookingsByDate, listScheduleBlocks, saveBooking, type BookingStatus, type StoredBooking } from "./bookingStore";
-import { buildBookingEstimate, pricedServices, vehicleTypes, type BookingService, type VehicleType } from "./pricing";
+import { buildBookingEstimate, getTelegramPriceLabel, vehicleTypes, type BookingService, type PricedService, type VehicleType } from "./pricing";
 import { isTimeSlot, parseTimeSlotToMinutes, timeSlots, type TimeSlot } from "./schedule";
+import { getPricedServices, updateServicePricing } from "./servicePricingStore";
 import {
   clearTelegramManualSession,
   getTelegramManualSession,
   saveTelegramManualSession,
   type TelegramManualSession,
-  type TelegramManualStep,
 } from "./telegramManualStore";
+import {
+  clearTelegramPriceSession,
+  getTelegramPriceSession,
+  saveTelegramPriceSession,
+  type TelegramPriceSession,
+  type TelegramPriceUpdate,
+} from "./telegramPriceStore";
 
 type TelegramBooking = BookingInput & { id: string; status?: BookingStatus };
 
@@ -55,10 +63,12 @@ export async function sendTelegramBookingNotification(booking: TelegramBooking):
     const response = await telegramApi("sendMessage", {
       chat_id: chatId,
       parse_mode: "HTML",
-      text: buildTelegramBookingMessage(booking),
+      text: await buildTelegramBookingMessage(booking),
       reply_markup: {
         inline_keyboard: [
           [{ text: "\u2795 New Booking", callback_data: "manual_new" }],
+          [{ text: "\ud83d\udcc5 Today Schedule", callback_data: "schedule_today" }],
+          [{ text: "\ud83d\udcb5 Change Prices", callback_data: "prices_manage" }],
           [{ text: "Open Admin", url: buildAdminBookingUrl(booking) }],
         ],
       },
@@ -112,7 +122,58 @@ export async function handleTelegramCallbackQuery(callbackQuery: TelegramCallbac
       return result;
     }
 
-    await answerTelegramCallback(callbackQuery.id, "Use /newbooking or the New Booking button.");
+    if (data === "schedule_today") {
+      console.info("Today Schedule button pressed", { chatId });
+      await sendTodaySchedule(chatId);
+      await answerTelegramCallback(callbackQuery.id, "Today schedule sent.");
+      return { ok: true, message: "Today schedule sent." };
+    }
+
+    if (data === "prices_manage") {
+      console.info("Change Prices button pressed", { chatId });
+      if (!isAdminChat(chatId)) {
+        await sendTelegramMessage(chatId, "You are not authorized to change prices.");
+        await answerTelegramCallback(callbackQuery.id, "Not authorized.");
+        return { ok: false, message: "Unauthorized Telegram price access." };
+      }
+
+      await startPriceManagement(chatId);
+      await answerTelegramCallback(callbackQuery.id, "Choose a service.");
+      return { ok: true, message: "Price management started." };
+    }
+
+    if (data.startsWith("prices_pick:")) {
+      if (!isAdminChat(chatId)) {
+        await sendTelegramMessage(chatId, "You are not authorized to change prices.");
+        await answerTelegramCallback(callbackQuery.id, "Not authorized.");
+        return { ok: false, message: "Unauthorized Telegram price access." };
+      }
+
+      const service = await getServiceFromCallbackCode(data.slice("prices_pick:".length));
+      if (!service) {
+        await answerTelegramCallback(callbackQuery.id, "Service not found.");
+        return { ok: false, message: "Service not found." };
+      }
+
+      await promptForServicePrice(chatId, service);
+      await answerTelegramCallback(callbackQuery.id, "Send the new price.");
+      return { ok: true, message: "Price prompt sent." };
+    }
+
+    if (data === "prices_cancel") {
+      await clearTelegramPriceSession(chatId);
+      await sendTelegramMessage(chatId, "Price update cancelled.");
+      await answerTelegramCallback(callbackQuery.id, "Cancelled.");
+      return { ok: true, message: "Price update cancelled." };
+    }
+
+    if (data === "prices_confirm") {
+      const result = await confirmPriceUpdate(chatId);
+      await answerTelegramCallback(callbackQuery.id, result.ok ? "Price updated." : "Could not update price.");
+      return result;
+    }
+
+    await answerTelegramCallback(callbackQuery.id, "Use the menu buttons.");
     return { ok: true, message: "No supported Telegram action." };
   } catch (error) {
     console.error("Telegram callback failed", { data, chatId, error });
@@ -140,15 +201,27 @@ export async function handleTelegramMessage(message: TelegramMessage): Promise<T
       return { ok: true, message: "Manual booking started." };
     }
 
-    const session = await getTelegramManualSession(chatId);
-    if (!session) {
-      return { ok: true, message: "No active manual booking session." };
+    if (text.toLowerCase() === "/cancel") {
+      await Promise.all([clearTelegramManualSession(chatId), clearTelegramPriceSession(chatId)]);
+      await sendTelegramMessage(chatId, "Telegram action cancelled.");
+      return { ok: true, message: "Telegram action cancelled." };
     }
 
-    if (text.toLowerCase() === "/cancel") {
-      await clearTelegramManualSession(chatId);
-      await sendTelegramMessage(chatId, "Manual booking cancelled.");
-      return { ok: true, message: "Manual booking cancelled." };
+    const priceSession = await getTelegramPriceSession(chatId);
+    if (priceSession) {
+      if (!isAdminChat(chatId)) {
+        await clearTelegramPriceSession(chatId);
+        await sendTelegramMessage(chatId, "You are not authorized to change prices.");
+        return { ok: false, message: "Unauthorized Telegram price access." };
+      }
+
+      await processPriceInput(priceSession, text);
+      return { ok: true, message: "Price input saved." };
+    }
+
+    const session = await getTelegramManualSession(chatId);
+    if (!session) {
+      return { ok: true, message: "No active Telegram session." };
     }
 
     await processManualBookingInput(session, text);
@@ -169,12 +242,7 @@ export async function sendDailyTelegramSchedule(date = getTodayChicagoDate()) {
   }
 
   try {
-    const [bookings, blocks] = await Promise.all([listBookingsByDate(date), listScheduleBlocks(date)]);
-    const message = buildDailyScheduleMessage(date, bookings, blocks);
-    await sendTelegramMessage(chatId, message, {
-      inline_keyboard: [[{ text: "\u2795 New Booking", callback_data: "manual_new" }]],
-    });
-    console.info("Daily Telegram schedule sent", { date, bookingCount: bookings.length, blockCount: blocks.length });
+    await sendTodaySchedule(chatId, date);
     return "sent" as const;
   } catch (error) {
     console.error("Daily Telegram schedule failed", { date, error });
@@ -183,6 +251,7 @@ export async function sendDailyTelegramSchedule(date = getTodayChicagoDate()) {
 }
 
 async function startManualBooking(chatId: string) {
+  await clearTelegramPriceSession(chatId);
   await saveTelegramManualSession({
     chatId,
     step: "name",
@@ -198,11 +267,15 @@ async function sendTelegramStartMenu(chatId: string) {
     [
       "<b>DETAILX admin bot</b>",
       "",
-      "Use the button below to add a phone, Instagram, or text booking.",
+      "Choose an action below.",
       "You can also send /newbooking anytime.",
     ].join("\n"),
     {
-      inline_keyboard: [[{ text: "\u2795 New Booking", callback_data: "manual_new" }]],
+      inline_keyboard: [
+        [{ text: "\u2795 New Booking", callback_data: "manual_new" }],
+        [{ text: "\ud83d\udcc5 Today Schedule", callback_data: "schedule_today" }],
+        [{ text: "\ud83d\udcb5 Change Prices", callback_data: "prices_manage" }],
+      ],
     }
   );
 }
@@ -246,12 +319,12 @@ async function processManualBookingInput(session: TelegramManualSession, text: s
     }
     nextSession.data.time = time;
     nextSession.step = "service";
-    await saveAndPrompt(nextSession, buildServicePrompt());
+    await saveAndPrompt(nextSession, buildServicePrompt(await getPricedServices()));
     return;
   }
 
   if (session.step === "service") {
-    const service = normalizeTelegramService(text);
+    const service = normalizeTelegramService(text, await getPricedServices());
     if (!service) {
       throw new Error("Choose a valid service number or name.");
     }
@@ -290,7 +363,7 @@ async function processManualBookingInput(session: TelegramManualSession, text: s
     nextSession.data.price = isSkip(text) ? "" : normalizePrice(text);
     nextSession.step = "confirm";
     await saveTelegramManualSession(nextSession);
-    await sendTelegramMessage(session.chatId, buildManualBookingConfirmation(nextSession), {
+    await sendTelegramMessage(session.chatId, await buildManualBookingConfirmation(nextSession), {
       inline_keyboard: [[
         { text: "Confirm", callback_data: "manual_confirm" },
         { text: "Cancel", callback_data: "manual_cancel" },
@@ -315,8 +388,9 @@ async function confirmManualBooking(chatId: string): Promise<TelegramActionResul
     throw new Error("Manual booking time is not valid.");
   }
 
+  const pricedServices = await getPricedServices();
   const detail = { service: data.service, vehicleType: data.vehicleType, notes: data.notes || "" };
-  const estimate = buildBookingEstimate([detail]);
+  const estimate = buildBookingEstimate([detail], pricedServices);
   const booking: BookingInput = {
     service: data.service,
     date: data.date,
@@ -337,9 +411,112 @@ async function confirmManualBooking(chatId: string): Promise<TelegramActionResul
   await sendTelegramMessage(chatId, [
     "\u2705 <b>Booking saved</b>",
     "",
-    buildTelegramBookingMessage(savedBooking),
+    await buildTelegramBookingMessage(savedBooking),
   ].join("\n"));
   return { ok: true, message: "Manual booking saved." };
+}
+
+async function startPriceManagement(chatId: string) {
+  await clearTelegramManualSession(chatId);
+  const services = await getPricedServices();
+  await saveTelegramPriceSession({
+    chatId,
+    step: "service",
+    updatedAt: new Date().toISOString(),
+  });
+  await sendTelegramMessage(chatId, buildCurrentPricesMessage(services), {
+    inline_keyboard: buildPricePickerKeyboard(services),
+  });
+}
+
+async function promptForServicePrice(chatId: string, service: PricedService) {
+  await saveTelegramPriceSession({
+    chatId,
+    step: "price",
+    service: service.title,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const prompt = "prices" in service
+    ? [
+        `Selected: ${escapeTelegramHtml(service.title)}`,
+        `Current: ${escapeTelegramHtml(getTelegramPriceLabel(service))}`,
+        "",
+        "Send one price to update the Sedan/starting price, or send all three like:",
+        "Sedan 180 / SUV 200 / Truck 220",
+      ].join("\n")
+    : [
+        `Selected: ${escapeTelegramHtml(service.title)}`,
+        `Current: ${escapeTelegramHtml(getTelegramPriceLabel(service))}`,
+        "",
+        "Send the new price, for example:",
+        "$120",
+      ].join("\n");
+
+  await sendTelegramMessage(chatId, prompt);
+}
+
+async function processPriceInput(session: TelegramPriceSession, text: string) {
+  if (session.step !== "price" || !session.service) {
+    throw new Error("Choose a service first.");
+  }
+
+  const services = await getPricedServices();
+  const service = services.find((item) => item.title === session.service);
+
+  if (!service) {
+    throw new Error("That service was not found.");
+  }
+
+  const pendingUpdate = parsePriceUpdate(text, service);
+  console.info("Service price update requested", {
+    chatId: session.chatId,
+    service: service.title,
+    update: pendingUpdate,
+  });
+
+  await saveTelegramPriceSession({
+    chatId: session.chatId,
+    step: "confirm",
+    service: service.title,
+    pendingUpdate,
+    updatedAt: new Date().toISOString(),
+  });
+
+  await sendTelegramMessage(session.chatId, buildPriceConfirmationMessage(service, pendingUpdate), {
+    inline_keyboard: [[
+      { text: "Confirm", callback_data: "prices_confirm" },
+      { text: "Cancel", callback_data: "prices_cancel" },
+    ]],
+  });
+}
+
+async function confirmPriceUpdate(chatId: string): Promise<TelegramActionResult> {
+  const session = await getTelegramPriceSession(chatId);
+
+  if (!session || session.step !== "confirm" || !session.service || !session.pendingUpdate) {
+    await sendTelegramMessage(chatId, "No price update is ready to confirm.");
+    return { ok: false, message: "No price update ready." };
+  }
+
+  await updateServicePricing(session.service, session.pendingUpdate);
+  await clearTelegramPriceSession(chatId);
+  revalidatePath("/");
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin/settings");
+  console.info("Service price updated", {
+    chatId,
+    service: session.service,
+    update: session.pendingUpdate,
+  });
+  await sendTelegramMessage(chatId, "Price updated successfully.");
+  return { ok: true, message: "Service price updated." };
+}
+
+async function sendTodaySchedule(chatId: string, date = getTodayChicagoDate()) {
+  const [bookings, blocks] = await Promise.all([listBookingsByDate(date), listScheduleBlocks(date)]);
+  await sendTelegramMessage(chatId, buildTodayScheduleMessage(bookings, blocks));
+  console.info("Today schedule sent", { chatId, date, bookingCount: bookings.length, blockCount: blocks.length });
 }
 
 async function saveAndPrompt(session: TelegramManualSession, prompt: string) {
@@ -347,11 +524,12 @@ async function saveAndPrompt(session: TelegramManualSession, prompt: string) {
   await sendTelegramMessage(session.chatId, prompt);
 }
 
-function buildTelegramBookingMessage(booking: TelegramBooking) {
+async function buildTelegramBookingMessage(booking: TelegramBooking) {
+  const services = await getPricedServices();
   const details = booking.details?.length
     ? booking.details
     : [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
-  const estimate = buildBookingEstimate(details);
+  const estimate = buildBookingEstimate(details, services);
   const notes = estimate.details.map((detail) => detail.notes).filter(Boolean).join(" | ") || booking.notes || "N/A";
 
   return [
@@ -379,45 +557,38 @@ function buildTelegramBookingMessage(booking: TelegramBooking) {
   ].join("\n");
 }
 
-function buildDailyScheduleMessage(date: string, bookings: StoredBooking[], blocks: Awaited<ReturnType<typeof listScheduleBlocks>>) {
+function buildTodayScheduleMessage(bookings: StoredBooking[], blocks: Awaited<ReturnType<typeof listScheduleBlocks>>) {
   const activeBookings = bookings.filter((booking) => booking.status !== "cancelled").sort((a, b) => sortByTime(a.time, b.time));
   const sortedBlocks = [...blocks].sort((a, b) => sortByTime(a.startTime || a.time, b.startTime || b.time));
 
   if (!activeBookings.length && !sortedBlocks.length) {
-    return `Good morning. No bookings scheduled for today.\n\n${escapeTelegramHtml(date)}`;
+    return "No jobs scheduled for today.";
   }
 
   return [
-    "<b>Good morning - DETAILX schedule for today</b>",
-    escapeTelegramHtml(date),
+    "Today's DETAILX schedule:",
     "",
-    ...activeBookings.flatMap((booking) => {
-      const details = booking.details?.length ? booking.details : [{ service: booking.service, vehicleType: booking.vehicleType }];
-      return [
-        `<b>${escapeTelegramHtml(booking.time)}</b>`,
-        `Client: ${escapeTelegramHtml(booking.name)}`,
-        `Phone: ${escapeTelegramHtml(booking.phone)}`,
-        `Service: ${escapeTelegramHtml(details.map((detail) => detail.service).join(" + "))}`,
-        `Vehicle: ${escapeTelegramHtml(details.map((detail) => detail.vehicleType).join(" + "))}`,
-        `Address: ${escapeTelegramHtml(booking.address)}`,
-        `Price: ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
-        booking.notes ? `Notes: ${escapeTelegramHtml(booking.notes)}` : "",
-        "",
-      ].filter(Boolean);
-    }),
-    ...sortedBlocks.flatMap((block) => [
-      "<b>Blocked Time</b>",
-      `${escapeTelegramHtml(block.startTime || block.time)} - ${escapeTelegramHtml(block.endTime)}`,
-      `Reason: ${escapeTelegramHtml(block.reason || "Unavailable")}`,
+    ...activeBookings.flatMap((booking) => [
+      `${escapeTelegramHtml(booking.time)} - ${escapeTelegramHtml(booking.name)}`,
+      `Phone: ${escapeTelegramHtml(booking.phone)}`,
+      `Address: ${escapeTelegramHtml(booking.address)}`,
+      `Price: ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
       "",
     ]),
-  ].join("\n");
+    ...(sortedBlocks.length
+      ? [
+          "Blocked:",
+          ...sortedBlocks.map((block) => `${escapeTelegramHtml(block.startTime || block.time)}-${escapeTelegramHtml(block.endTime)} - ${escapeTelegramHtml(block.reason || "Busy")}`),
+        ]
+      : []),
+  ].join("\n").trim();
 }
 
-function buildManualBookingConfirmation(session: TelegramManualSession) {
+async function buildManualBookingConfirmation(session: TelegramManualSession) {
   const data = session.data;
+  const services = await getPricedServices();
   const estimate = data.service && data.vehicleType
-    ? buildBookingEstimate([{ service: data.service, vehicleType: data.vehicleType, notes: data.notes || "" }]).estimatedPrice
+    ? buildBookingEstimate([{ service: data.service, vehicleType: data.vehicleType, notes: data.notes || "" }], services).estimatedPrice
     : "Estimate pending";
 
   return [
@@ -435,12 +606,99 @@ function buildManualBookingConfirmation(session: TelegramManualSession) {
   ].join("\n");
 }
 
-function buildServicePrompt() {
+function buildServicePrompt(services: readonly PricedService[]) {
   return [
     "Service/detail name?",
     "",
-    ...pricedServices.map((service, index) => `${index + 1}. ${service.title}`),
+    ...services.map((service, index) => `${index + 1}. ${service.title} - ${getTelegramPriceLabel(service)}`),
   ].join("\n");
+}
+
+function buildCurrentPricesMessage(services: readonly PricedService[]) {
+  return [
+    "Current prices:",
+    ...services.map((service, index) => `${index + 1}. ${service.title} - ${getTelegramPriceLabel(service)}`),
+    "",
+    "Which service do you want to update?",
+  ].join("\n");
+}
+
+function buildPricePickerKeyboard(services: readonly PricedService[]) {
+  return services.map((service) => [{ text: service.title, callback_data: `prices_pick:${service.code}` }]);
+}
+
+function buildPriceConfirmationMessage(service: PricedService, update: TelegramPriceUpdate) {
+  const nextService = "prices" in service
+    ? {
+        ...service,
+        prices: {
+          ...service.prices,
+          ...(update.prices || {}),
+        },
+      }
+    : {
+        ...service,
+        startingPrice: update.startingPrice ?? service.startingPrice,
+      };
+
+  const currentLabel = "prices" in service && update.prices && Object.keys(update.prices).length > 1
+    ? getTelegramPriceLabel(service)
+    : getPrimaryPriceLabel(service);
+  const nextLabel = "prices" in nextService && update.prices && Object.keys(update.prices).length > 1
+    ? getTelegramPriceLabel(nextService)
+    : getPrimaryPriceLabel(nextService);
+
+  return [
+    `Update ${escapeTelegramHtml(service.title)} from ${escapeTelegramHtml(currentLabel)} to ${escapeTelegramHtml(nextLabel)}?`,
+  ].join("\n");
+}
+
+function getPrimaryPriceLabel(service: PricedService) {
+  if ("prices" in service) {
+    return `$${service.prices.Sedan}`;
+  }
+
+  return `$${service.startingPrice}`;
+}
+
+function parsePriceUpdate(text: string, service: PricedService): TelegramPriceUpdate {
+  if ("prices" in service) {
+    const vehicleMatches = Array.from(text.matchAll(/(sedan|suv|truck)\s*\$?\s*(\d+)/gi));
+
+    if (vehicleMatches.length) {
+      const prices = vehicleMatches.reduce<Partial<Record<VehicleType, number>>>((acc, match) => {
+        const vehicle = capitalize(match[1].toLowerCase()) as VehicleType;
+        acc[vehicle] = Number(match[2]);
+        return acc;
+      }, {});
+
+      if (!prices.Sedan || !prices.SUV || !prices.Truck) {
+        throw new Error("Send all three vehicle prices: Sedan, SUV, and Truck.");
+      }
+
+      return { service: service.title, prices };
+    }
+
+    const amount = extractFirstPrice(text);
+    if (!amount) {
+      throw new Error("Send a valid price like $180 or Sedan 180 / SUV 200 / Truck 220.");
+    }
+
+    return {
+      service: service.title,
+      prices: { Sedan: amount },
+    };
+  }
+
+  const amount = extractFirstPrice(text);
+  if (!amount) {
+    throw new Error("Send a valid price like $120.");
+  }
+
+  return {
+    service: service.title,
+    startingPrice: amount,
+  };
 }
 
 function buildAdminBookingUrl(booking: TelegramBooking) {
@@ -509,14 +767,14 @@ function normalizeTelegramTime(value: string): TimeSlot | null {
   return isTimeSlot(candidate) ? candidate : null;
 }
 
-function normalizeTelegramService(value: string): BookingService | null {
+function normalizeTelegramService(value: string, services: readonly PricedService[]): BookingService | null {
   const index = Number(value.trim());
-  if (Number.isInteger(index) && index > 0 && index <= pricedServices.length) {
-    return pricedServices[index - 1].title;
+  if (Number.isInteger(index) && index > 0 && index <= services.length) {
+    return services[index - 1].title;
   }
 
   const normalized = value.trim().toLowerCase();
-  const service = bookingServices.find((item) => item.toLowerCase() === normalized) || pricedServices.find((item) => item.title.toLowerCase().includes(normalized))?.title;
+  const service = bookingServices.find((item) => item.toLowerCase() === normalized) || services.find((item) => item.title.toLowerCase().includes(normalized))?.title;
   return service || null;
 }
 
@@ -577,4 +835,22 @@ function escapeTelegramHtml(value: unknown) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function extractFirstPrice(value: string) {
+  const match = value.match(/(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function isAdminChat(chatId: string) {
+  return Boolean(chatId) && chatId === String(process.env.TELEGRAM_CHAT_ID || "");
+}
+
+async function getServiceFromCallbackCode(code: string) {
+  const services = await getPricedServices();
+  return services.find((service) => service.code === code) || null;
 }

@@ -16,9 +16,11 @@ export type AdminClient = {
 };
 
 export function getBookingDetails(booking: StoredBooking): BookingDetailEstimate[] {
-  const details = booking.details?.length
-    ? booking.details
-    : [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
+  if (booking.details?.length && booking.details.every((detail) => "estimatedPrice" in detail && "lineNumber" in detail)) {
+    return booking.details as unknown as BookingDetailEstimate[];
+  }
+
+  const details = [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
 
   return buildBookingEstimate(details).details;
 }

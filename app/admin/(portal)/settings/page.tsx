@@ -1,10 +1,13 @@
 import { AdminPageHeader } from "@/components/admin/AdminShell";
-import { getStartingPriceLabel, pricedServices } from "@/lib/pricing";
+import { getStartingPriceLabel } from "@/lib/pricing";
+import { getPricedServices } from "@/lib/servicePricingStore";
 import { timeSlots } from "@/lib/schedule";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminSettingsPage() {
+export default async function AdminSettingsPage() {
+  const pricedServices = await getPricedServices();
+
   return (
     <>
       <AdminPageHeader eyebrow="Config" title="Settings" copy="Operational defaults used by the current booking flow. Environment variables still control secrets and integrations." />
@@ -23,7 +26,7 @@ export default function AdminSettingsPage() {
               <div className="rounded-lg bg-smoke px-4 py-3" key={service.title}>
                 <div className="flex items-start justify-between gap-4">
                   <p className="font-black uppercase">{service.title}</p>
-                  <p className="shrink-0 text-sm font-black text-red">{getStartingPriceLabel(service.title)}</p>
+                  <p className="shrink-0 text-sm font-black text-red">{getStartingPriceLabel(service.title, pricedServices)}</p>
                 </div>
                 <p className="mt-1 text-sm text-steel">Shown in booking flow and admin estimates.</p>
               </div>

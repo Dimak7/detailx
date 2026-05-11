@@ -227,6 +227,14 @@ Telegram runs only from server routes. Booking notifications send after a bookin
 
 Set your bot webhook to `POST /api/telegram`. The webhook supports `/newbooking` and the `➕ New Booking` button, then walks through name, phone, date, time, service, vehicle, location, notes, and price. Manual Telegram bookings save with `source: telegram_manual`, do not require a customer email, and still block public availability.
 
+The bot uses webhooks, not polling. Railway does not run a separate Telegram worker process; Telegram must be configured to send updates to the deployed app:
+
+```bash
+https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://detailxchicago.com/api/telegram&secret_token=<TELEGRAM_WEBHOOK_SECRET>
+```
+
+After that, send `/start` to the bot. The start menu will show `➕ New Booking`.
+
 Daily schedule messages are sent by calling:
 
 ```bash

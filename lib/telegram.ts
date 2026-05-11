@@ -58,7 +58,7 @@ export async function sendTelegramBookingNotification(booking: TelegramBooking):
       text: buildTelegramBookingMessage(booking),
       reply_markup: {
         inline_keyboard: [
-          [{ text: "➕ New Booking", callback_data: "manual_new" }],
+          [{ text: "\u2795 New Booking", callback_data: "manual_new" }],
           [{ text: "Open Admin", url: buildAdminBookingUrl(booking) }],
         ],
       },
@@ -130,6 +130,11 @@ export async function handleTelegramMessage(message: TelegramMessage): Promise<T
   }
 
   try {
+    if (text.toLowerCase() === "/start" || text.toLowerCase() === "/help") {
+      await sendTelegramStartMenu(chatId);
+      return { ok: true, message: "Telegram start menu sent." };
+    }
+
     if (text.toLowerCase() === "/newbooking" || text.toLowerCase() === "new booking") {
       await startManualBooking(chatId);
       return { ok: true, message: "Manual booking started." };
@@ -137,9 +142,6 @@ export async function handleTelegramMessage(message: TelegramMessage): Promise<T
 
     const session = await getTelegramManualSession(chatId);
     if (!session) {
-      if (text.toLowerCase() === "/start") {
-        await sendTelegramMessage(chatId, "DETAILX admin bot is ready. Send /newbooking to add a phone or text booking.");
-      }
       return { ok: true, message: "No active manual booking session." };
     }
 
@@ -170,7 +172,7 @@ export async function sendDailyTelegramSchedule(date = getTodayChicagoDate()) {
     const [bookings, blocks] = await Promise.all([listBookingsByDate(date), listScheduleBlocks(date)]);
     const message = buildDailyScheduleMessage(date, bookings, blocks);
     await sendTelegramMessage(chatId, message, {
-      inline_keyboard: [[{ text: "➕ New Booking", callback_data: "manual_new" }]],
+      inline_keyboard: [[{ text: "\u2795 New Booking", callback_data: "manual_new" }]],
     });
     console.info("Daily Telegram schedule sent", { date, bookingCount: bookings.length, blockCount: blocks.length });
     return "sent" as const;
@@ -187,7 +189,22 @@ async function startManualBooking(chatId: string) {
     data: {},
     updatedAt: new Date().toISOString(),
   });
-  await sendTelegramMessage(chatId, "➕ <b>New DETAILX Booking</b>\n\nCustomer name?");
+  await sendTelegramMessage(chatId, "\u2795 <b>New DETAILX Booking</b>\n\nCustomer name?");
+}
+
+async function sendTelegramStartMenu(chatId: string) {
+  await sendTelegramMessage(
+    chatId,
+    [
+      "<b>DETAILX admin bot</b>",
+      "",
+      "Use the button below to add a phone, Instagram, or text booking.",
+      "You can also send /newbooking anytime.",
+    ].join("\n"),
+    {
+      inline_keyboard: [[{ text: "\u2795 New Booking", callback_data: "manual_new" }]],
+    }
+  );
 }
 
 async function processManualBookingInput(session: TelegramManualSession, text: string) {
@@ -318,7 +335,7 @@ async function confirmManualBooking(chatId: string): Promise<TelegramActionResul
   const savedBooking = await saveBooking(booking);
   await clearTelegramManualSession(chatId);
   await sendTelegramMessage(chatId, [
-    "✅ <b>Booking saved</b>",
+    "\u2705 <b>Booking saved</b>",
     "",
     buildTelegramBookingMessage(savedBooking),
   ].join("\n"));
@@ -371,7 +388,7 @@ function buildDailyScheduleMessage(date: string, bookings: StoredBooking[], bloc
   }
 
   return [
-    "<b>Good morning — DETAILX schedule for today</b>",
+    "<b>Good morning - DETAILX schedule for today</b>",
     escapeTelegramHtml(date),
     "",
     ...activeBookings.flatMap((booking) => {
@@ -390,7 +407,7 @@ function buildDailyScheduleMessage(date: string, bookings: StoredBooking[], bloc
     }),
     ...sortedBlocks.flatMap((block) => [
       "<b>Blocked Time</b>",
-      `${escapeTelegramHtml(block.startTime || block.time)} – ${escapeTelegramHtml(block.endTime)}`,
+      `${escapeTelegramHtml(block.startTime || block.time)} - ${escapeTelegramHtml(block.endTime)}`,
       `Reason: ${escapeTelegramHtml(block.reason || "Unavailable")}`,
       "",
     ]),

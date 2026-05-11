@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleTelegramCallbackQuery } from "@/lib/telegram";
+import { handleTelegramCallbackQuery, handleTelegramMessage } from "@/lib/telegram";
 
 export const runtime = "nodejs";
 
@@ -15,6 +15,12 @@ type TelegramUpdate = {
       message_id?: number;
     };
   };
+  message?: {
+    chat?: {
+      id?: number | string;
+    };
+    text?: string;
+  };
 };
 
 export async function POST(request: Request) {
@@ -28,10 +34,16 @@ export async function POST(request: Request) {
     console.info("Telegram update received", {
       updateId: update.update_id,
       hasCallbackQuery: Boolean(update.callback_query),
+      hasMessage: Boolean(update.message),
     });
 
     if (update.callback_query) {
       const result = await handleTelegramCallbackQuery(update.callback_query);
+      return NextResponse.json({ ok: result.ok, message: result.message });
+    }
+
+    if (update.message) {
+      const result = await handleTelegramMessage(update.message);
       return NextResponse.json({ ok: result.ok, message: result.message });
     }
 

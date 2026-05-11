@@ -4,7 +4,15 @@ import path from "node:path";
 import type { Pool } from "pg";
 import type { BookingInput } from "./bookingSchema";
 import { getDatabasePool } from "./database";
-import { isTimeSlot, timeSlots, type SlotAvailability, type TimeSlot } from "./schedule";
+import {
+  assertTimeRange,
+  doTimeRangesOverlap,
+  isSlotWithinRange,
+  isTimeSlot,
+  timeSlots,
+  type SlotAvailability,
+  type TimeSlot,
+} from "./schedule";
 
 export type StoredBooking = BookingInput & {
   id: string;
@@ -28,6 +36,7 @@ type DatabaseBookingRow = {
   notes: string | null;
   details_json: string | null;
   status: string | null;
+  source: string | null;
   created_at: Date | string;
 };
 
@@ -35,6 +44,8 @@ export type ScheduleBlock = {
   id: string;
   date: string;
   time: TimeSlot;
+  startTime: string;
+  endTime: string;
   reason: string;
   createdAt: string;
 };
@@ -44,6 +55,8 @@ let hasEnsuredSchema = false;
 export async function saveBooking(booking: BookingInput) {
   const storedBooking: StoredBooking = {
     ...booking,
+    email: booking.email || "",
+    source: booking.source || "website",
     id: randomUUID(),
     createdAt: new Date().toISOString(),
     status: "pending",
@@ -71,13 +84,16 @@ export async function getAvailability(date: string): Promise<SlotAvailability[]>
         "SELECT booking_time FROM bookings WHERE booking_date = $1 AND status IN ('pending', 'booked', 'confirmed')",
         [date]
       ),
-      db.query<{ block_time: string }>(
-        "SELECT block_time FROM schedule_blocks WHERE block_date = $1 AND status = 'blocked'",
+      db.query<{ block_time: string; start_time: string | null; end_time: string | null }>(
+        "SELECT block_time, start_time, end_time FROM schedule_blocks WHERE block_date = $1 AND status = 'blocked'",
         [date]
       ),
     ]);
     const bookedTimes = new Set(bookings.rows.map((row) => row.booking_time));
-    const blockedTimes = new Set(blocks.rows.map((row) => row.block_time));
+    const blockedTimes = getBlockedTimeSet(blocks.rows.map((row) => ({
+      startTime: row.start_time || row.block_time,
+      endTime: row.end_time || getNextTimeSlot(row.block_time),
+    })));
 
     return buildAvailability(bookedTimes, blockedTimes);
   }
@@ -88,7 +104,11 @@ export async function getAvailability(date: string): Promise<SlotAvailability[]>
       .filter((booking) => booking.date === date && isActiveBookingStatus(booking.status))
       .map((booking) => booking.time)
   );
-  const blockedTimes = new Set((await readLocalBlocks()).filter((block) => block.date === date).map((block) => block.time));
+  const blockedTimes = getBlockedTimeSet(
+    (await readLocalBlocks())
+      .filter((block) => block.date === date)
+      .map((block) => ({ startTime: block.startTime || block.time, endTime: block.endTime || getNextTimeSlot(block.time) }))
+  );
 
   return buildAvailability(bookedTimes, blockedTimes);
 }
@@ -100,7 +120,7 @@ export async function listBookingsByDate(date: string) {
     await ensureSchema(db);
     const result = await db.query<DatabaseBookingRow>(
       `SELECT id, service, booking_date, booking_time, name, phone, email, vehicle_type, address,
-        estimated_price, notes, details_json, status, created_at
+        estimated_price, notes, details_json, status, source, created_at
        FROM bookings
        WHERE booking_date = $1
        ORDER BY booking_time ASC, created_at DESC`,
@@ -144,7 +164,7 @@ export async function listBookings(filters: { date?: string; status?: BookingSta
     await ensureSchema(db);
     const result = await db.query<DatabaseBookingRow>(
       `SELECT id, service, booking_date, booking_time, name, phone, email, vehicle_type, address,
-        estimated_price, notes, details_json, status, created_at
+        estimated_price, notes, details_json, status, source, created_at
        FROM bookings
        ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
        ORDER BY booking_date DESC, booking_time ASC, created_at DESC
@@ -172,7 +192,7 @@ export async function getBookingById(id: string) {
     await ensureSchema(db);
     const result = await db.query<DatabaseBookingRow>(
       `SELECT id, service, booking_date, booking_time, name, phone, email, vehicle_type, address,
-        estimated_price, notes, details_json, status, created_at
+        estimated_price, notes, details_json, status, source, created_at
        FROM bookings
        WHERE id = $1
        LIMIT 1`,
@@ -191,10 +211,10 @@ export async function listScheduleBlocks(date: string) {
   if (db) {
     await ensureSchema(db);
     const result = await db.query(
-      `SELECT id, block_date, block_time, reason, created_at
+      `SELECT id, block_date, block_time, start_time, end_time, reason, created_at
        FROM schedule_blocks
        WHERE block_date = $1 AND status = 'blocked'
-       ORDER BY block_time ASC`,
+       ORDER BY COALESCE(start_time, block_time) ASC`,
       [date]
     );
 
@@ -202,6 +222,8 @@ export async function listScheduleBlocks(date: string) {
       id: row.id,
       date: formatDatabaseDate(row.block_date),
       time: row.block_time,
+      startTime: row.start_time || row.block_time,
+      endTime: row.end_time || getNextTimeSlot(row.block_time),
       reason: row.reason || "",
       createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
     })) as ScheduleBlock[];
@@ -210,15 +232,17 @@ export async function listScheduleBlocks(date: string) {
   return (await readLocalBlocks()).filter((block) => block.date === date);
 }
 
-export async function createScheduleBlock(input: { date: string; time: string; reason?: string }) {
-  if (!isTimeSlot(input.time)) {
-    throw new Error("Choose a valid time slot.");
-  }
+export async function createScheduleBlock(input: { date: string; time?: string; startTime?: string; endTime?: string; reason?: string }) {
+  const startTime = input.startTime || input.time || "";
+  const endTime = input.endTime || getNextTimeSlot(startTime);
+  assertTimeRange(startTime, endTime);
 
   const block: ScheduleBlock = {
     id: randomUUID(),
     date: input.date,
-    time: input.time,
+    time: startTime as TimeSlot,
+    startTime,
+    endTime,
     reason: input.reason?.trim() || "Unavailable",
     createdAt: new Date().toISOString(),
   };
@@ -228,32 +252,26 @@ export async function createScheduleBlock(input: { date: string; time: string; r
     await ensureSchema(db);
     await db.query("BEGIN");
     try {
-      await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${block.date}:${block.time}`]);
+      await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${block.date}:${block.startTime}:${block.endTime}`]);
       const booked = await db.query(
-        "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
-        [block.date, block.time]
+        "SELECT 1 FROM bookings WHERE booking_date = $1 AND status IN ('pending', 'booked', 'confirmed') AND booking_time = ANY($2::text[]) LIMIT 1",
+        [block.date, getSlotsInRange(block.startTime, block.endTime)]
       );
-      const blocked = await db.query(
-        "SELECT 1 FROM schedule_blocks WHERE block_date = $1 AND block_time = $2 AND status = 'blocked' LIMIT 1",
-        [block.date, block.time]
-      );
+      const blocked = await hasDatabaseRangeBlockConflict(db, block.date, block.startTime, block.endTime);
 
       if (booked.rowCount) {
-        throw new Error("That slot already has a booking.");
+        throw new Error("That time range already has a booking.");
       }
 
-      if (blocked.rowCount) {
-        await db.query(
-          "UPDATE schedule_blocks SET reason = $3 WHERE block_date = $1 AND block_time = $2 AND status = 'blocked'",
-          [block.date, block.time, block.reason]
-        );
-      } else {
-        await db.query(
-          `INSERT INTO schedule_blocks (id, block_date, block_time, reason, status, created_at)
-           VALUES ($1, $2, $3, $4, 'blocked', $5)`,
-          [block.id, block.date, block.time, block.reason, block.createdAt]
-        );
+      if (blocked) {
+        throw new Error("That time range already has a block.");
       }
+
+      await db.query(
+        `INSERT INTO schedule_blocks (id, block_date, block_time, start_time, end_time, reason, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'blocked', $7)`,
+        [block.id, block.date, block.time, block.startTime, block.endTime, block.reason, block.createdAt]
+      );
       await db.query("COMMIT");
       return block;
     } catch (error) {
@@ -263,14 +281,73 @@ export async function createScheduleBlock(input: { date: string; time: string; r
   }
 
   const bookings = await readLocalBookings();
-  if (bookings.some((booking) => booking.date === block.date && booking.time === block.time && isActiveBookingStatus(booking.status))) {
-    throw new Error("That slot already has a booking.");
+  if (bookings.some((booking) => booking.date === block.date && isActiveBookingStatus(booking.status) && isSlotWithinRange(booking.time, block.startTime, block.endTime))) {
+    throw new Error("That time range already has a booking.");
   }
 
-  const blocks = (await readLocalBlocks()).filter((item) => !(item.date === block.date && item.time === block.time));
+  const blocks = await readLocalBlocks();
+  if (blocks.some((item) => item.date === block.date && doTimeRangesOverlap(block.startTime, block.endTime, item.startTime || item.time, item.endTime || getNextTimeSlot(item.time)))) {
+    throw new Error("That time range already has a block.");
+  }
   blocks.push(block);
   await writeLocalBlocks(blocks);
   return block;
+}
+
+export async function updateScheduleBlock(id: string, input: { date: string; startTime: string; endTime: string; reason?: string }) {
+  assertTimeRange(input.startTime, input.endTime);
+  const db = getDatabasePool();
+
+  if (db) {
+    await ensureSchema(db);
+    await db.query("BEGIN");
+    try {
+      await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`${input.date}:${input.startTime}:${input.endTime}`]);
+      const booked = await db.query(
+        "SELECT 1 FROM bookings WHERE booking_date = $1 AND status IN ('pending', 'booked', 'confirmed') AND booking_time = ANY($2::text[]) LIMIT 1",
+        [input.date, getSlotsInRange(input.startTime, input.endTime)]
+      );
+      const blocked = await hasDatabaseRangeBlockConflict(db, input.date, input.startTime, input.endTime, id);
+
+      if (booked.rowCount) {
+        throw new Error("That time range already has a booking.");
+      }
+
+      if (blocked) {
+        throw new Error("That time range already has another block.");
+      }
+
+      await db.query(
+        `UPDATE schedule_blocks
+         SET block_date = $2, block_time = $3, start_time = $3, end_time = $4, reason = $5
+         WHERE id = $1`,
+        [id, input.date, input.startTime, input.endTime, input.reason?.trim() || "Unavailable"]
+      );
+      await db.query("COMMIT");
+      return;
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  }
+
+  const blocks = await readLocalBlocks();
+  const bookings = await readLocalBookings();
+  if (bookings.some((booking) => booking.date === input.date && isActiveBookingStatus(booking.status) && isSlotWithinRange(booking.time, input.startTime, input.endTime))) {
+    throw new Error("That time range already has a booking.");
+  }
+  if (blocks.some((block) => block.id !== id && block.date === input.date && doTimeRangesOverlap(input.startTime, input.endTime, block.startTime || block.time, block.endTime || getNextTimeSlot(block.time)))) {
+    throw new Error("That time range already has another block.");
+  }
+  const next = blocks.map((block) => block.id === id ? {
+    ...block,
+    date: input.date,
+    time: input.startTime as TimeSlot,
+    startTime: input.startTime,
+    endTime: input.endTime,
+    reason: input.reason?.trim() || "Unavailable",
+  } : block);
+  await writeLocalBlocks(next);
 }
 
 export async function deleteScheduleBlock(id: string) {
@@ -310,12 +387,9 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
           "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND id <> $3 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
           [date, booking.booking_time, id]
         );
-        const block = await db.query(
-          "SELECT 1 FROM schedule_blocks WHERE block_date = $1 AND block_time = $2 AND status = 'blocked' LIMIT 1",
-          [date, booking.booking_time]
-        );
+        const block = await hasDatabaseBlockConflict(db, date, booking.booking_time);
 
-        if (conflict.rowCount || block.rowCount) {
+        if (conflict.rowCount || block) {
           throw new Error("That slot is not available.");
         }
 
@@ -357,7 +431,7 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
     );
 
     const blocks = await readLocalBlocks();
-    const blocked = blocks.some((block) => block.date === target.date && block.time === target.time);
+    const blocked = blocks.some((block) => block.date === target.date && isSlotWithinRange(target.time, block.startTime || block.time, block.endTime || getNextTimeSlot(block.time)));
 
     if (conflict || blocked) {
       throw new Error("That slot is not available.");
@@ -394,12 +468,9 @@ export async function updateBookingSchedule(id: string, input: { date: string; t
         "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND id <> $3 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
         [input.date, input.time, id]
       );
-      const block = await db.query(
-        "SELECT 1 FROM schedule_blocks WHERE block_date = $1 AND block_time = $2 AND status = 'blocked' LIMIT 1",
-        [input.date, input.time]
-      );
+      const block = await hasDatabaseBlockConflict(db, input.date, input.time);
 
-      if (conflict.rowCount || block.rowCount) {
+      if (conflict.rowCount || block) {
         throw new Error("That slot is not available.");
       }
 
@@ -426,7 +497,7 @@ export async function updateBookingSchedule(id: string, input: { date: string; t
   const blocks = await readLocalBlocks();
   const conflict =
     bookings.some((booking) => booking.id !== id && booking.date === input.date && booking.time === input.time && isActiveBookingStatus(booking.status)) ||
-    blocks.some((block) => block.date === input.date && block.time === input.time);
+    blocks.some((block) => block.date === input.date && isSlotWithinRange(input.time, block.startTime || block.time, block.endTime || getNextTimeSlot(block.time)));
 
   if (conflict) {
     throw new Error("That slot is not available.");
@@ -443,19 +514,16 @@ async function saveToDatabase(db: Pool, storedBooking: StoredBooking) {
       "SELECT 1 FROM bookings WHERE booking_date = $1 AND booking_time = $2 AND status IN ('pending', 'booked', 'confirmed') LIMIT 1",
       [storedBooking.date, storedBooking.time]
     );
-    const block = await db.query(
-      "SELECT 1 FROM schedule_blocks WHERE block_date = $1 AND block_time = $2 AND status = 'blocked' LIMIT 1",
-      [storedBooking.date, storedBooking.time]
-    );
+    const block = await hasDatabaseBlockConflict(db, storedBooking.date, storedBooking.time);
 
-    if (existingBooking.rowCount || block.rowCount) {
+    if (existingBooking.rowCount || block) {
       throw new Error("This time is no longer available. Please choose another slot.");
     }
 
     await db.query(
       `INSERT INTO bookings
-        (id, service, booking_date, booking_time, name, phone, email, vehicle_type, address, estimated_price, notes, details_json, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        (id, service, booking_date, booking_time, name, phone, email, vehicle_type, address, estimated_price, notes, details_json, status, source, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         storedBooking.id,
         storedBooking.service,
@@ -470,6 +538,7 @@ async function saveToDatabase(db: Pool, storedBooking: StoredBooking) {
         storedBooking.notes,
         JSON.stringify(storedBooking.details || []),
         storedBooking.status,
+        storedBooking.source || "website",
         storedBooking.createdAt,
       ]
     );
@@ -512,16 +581,21 @@ async function ensureSchema(db: Pool) {
   await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS details_json text");
   await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending'");
   await db.query("ALTER TABLE bookings ALTER COLUMN status SET DEFAULT 'pending'");
+  await db.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'website'");
   await db.query(`
     CREATE TABLE IF NOT EXISTS schedule_blocks (
       id uuid PRIMARY KEY,
       block_date date NOT NULL,
       block_time text NOT NULL,
+      start_time text,
+      end_time text,
       reason text,
       status text NOT NULL DEFAULT 'blocked',
       created_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await db.query("ALTER TABLE schedule_blocks ADD COLUMN IF NOT EXISTS start_time text");
+  await db.query("ALTER TABLE schedule_blocks ADD COLUMN IF NOT EXISTS end_time text");
 
   hasEnsuredSchema = true;
 }
@@ -529,7 +603,7 @@ async function ensureSchema(db: Pool) {
 async function saveToLocalJsonWithAvailability(booking: StoredBooking) {
   const [bookings, blocks] = await Promise.all([readLocalBookings(), readLocalBlocks()]);
 
-  if (blocks.some((block) => block.date === booking.date && block.time === booking.time)) {
+  if (blocks.some((block) => block.date === booking.date && isSlotWithinRange(booking.time, block.startTime || block.time, block.endTime || getNextTimeSlot(block.time)))) {
     throw new Error("This time is no longer available. Please choose another slot.");
   }
 
@@ -554,7 +628,11 @@ async function readLocalBookings() {
     bookings = [];
   }
 
-  return bookings.map((booking) => ({ ...booking, status: normalizeBookingStatus(booking.status) }));
+  return bookings.map((booking) => ({
+    ...booking,
+    source: normalizeBookingSource(booking.source),
+    status: normalizeBookingStatus(booking.status),
+  }));
 }
 
 async function writeLocalBookings(bookings: StoredBooking[]) {
@@ -570,7 +648,12 @@ async function readLocalBlocks() {
   await mkdir(dataDir, { recursive: true });
 
   try {
-    return JSON.parse(await readFile(filePath, "utf8")) as ScheduleBlock[];
+    const blocks = JSON.parse(await readFile(filePath, "utf8")) as ScheduleBlock[];
+    return blocks.map((block) => ({
+      ...block,
+      startTime: block.startTime || block.time,
+      endTime: block.endTime || getNextTimeSlot(block.time),
+    }));
   } catch {
     return [];
   }
@@ -591,6 +674,50 @@ function buildAvailability(bookedTimes: Set<string>, blockedTimes: Set<string>):
   }));
 }
 
+async function hasDatabaseBlockConflict(db: Pool, date: string, time: string) {
+  const result = await db.query<{ block_time: string; start_time: string | null; end_time: string | null }>(
+    "SELECT block_time, start_time, end_time FROM schedule_blocks WHERE block_date = $1 AND status = 'blocked'",
+    [date]
+  );
+
+  return result.rows.some((row) => isSlotWithinRange(time, row.start_time || row.block_time, row.end_time || getNextTimeSlot(row.block_time)));
+}
+
+async function hasDatabaseRangeBlockConflict(db: Pool, date: string, startTime: string, endTime: string, exceptId?: string) {
+  const result = await db.query<{ id: string; block_time: string; start_time: string | null; end_time: string | null }>(
+    "SELECT id, block_time, start_time, end_time FROM schedule_blocks WHERE block_date = $1 AND status = 'blocked'",
+    [date]
+  );
+
+  return result.rows.some((row) => {
+    if (exceptId && row.id === exceptId) {
+      return false;
+    }
+
+    return doTimeRangesOverlap(startTime, endTime, row.start_time || row.block_time, row.end_time || getNextTimeSlot(row.block_time));
+  });
+}
+
+function getBlockedTimeSet(blocks: Array<{ startTime: string; endTime: string }>) {
+  return new Set<string>(
+    timeSlots.filter((slot) => blocks.some((block) => isSlotWithinRange(slot, block.startTime, block.endTime)))
+  );
+}
+
+function getSlotsInRange(startTime: string, endTime: string) {
+  return timeSlots.filter((slot) => isSlotWithinRange(slot, startTime, endTime));
+}
+
+export function getNextTimeSlot(time: string) {
+  const index = timeSlots.findIndex((slot) => slot === time);
+
+  if (index >= 0 && index < timeSlots.length - 1) {
+    return timeSlots[index + 1];
+  }
+
+  return "8:00 PM";
+}
+
 function mapDatabaseBooking(row: DatabaseBookingRow): StoredBooking {
   return {
     id: row.id,
@@ -605,9 +732,18 @@ function mapDatabaseBooking(row: DatabaseBookingRow): StoredBooking {
     estimatedPrice: row.estimated_price || "",
     notes: row.notes || "",
     details: safeJsonParse(row.details_json) as StoredBooking["details"],
+    source: normalizeBookingSource(row.source),
     status: normalizeBookingStatus(row.status),
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
   };
+}
+
+function normalizeBookingSource(source: string | undefined | null): StoredBooking["source"] {
+  if (source === "telegram_manual" || source === "admin_manual") {
+    return source;
+  }
+
+  return "website";
 }
 
 function normalizeBookingStatus(status: string | undefined | null): BookingStatus {

@@ -7,6 +7,7 @@ import {
   listBookingsByDate,
   listScheduleBlocks,
   updateBookingStatus,
+  updateScheduleBlock,
   type BookingStatus,
 } from "@/lib/bookingStore";
 
@@ -39,7 +40,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const block = await createScheduleBlock({
       date: String(body.date || ""),
-      time: String(body.time || ""),
+      startTime: String(body.startTime || body.time || ""),
+      endTime: String(body.endTime || ""),
       reason: String(body.reason || "Unavailable"),
     });
 
@@ -58,6 +60,23 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
+  if (body.type === "block") {
+    try {
+      await updateScheduleBlock(String(body.id || ""), {
+        date: String(body.date || ""),
+        startTime: String(body.startTime || ""),
+        endTime: String(body.endTime || ""),
+        reason: String(body.reason || "Unavailable"),
+      });
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: error instanceof Error ? error.message : "Could not update this block." },
+        { status: 400 }
+      );
+    }
+  }
+
   const id = String(body.id || "");
   const status = String(body.status || "") as BookingStatus;
 

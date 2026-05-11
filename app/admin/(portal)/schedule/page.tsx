@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
 import { getBookingDetails, addDays, getDateString } from "@/lib/adminData";
-import { getAvailability, listBookingsByDate, listScheduleBlocks } from "@/lib/bookingStore";
-import { timeSlots } from "@/lib/schedule";
+import { getAvailability, getNextTimeSlot, listBookingsByDate, listScheduleBlocks } from "@/lib/bookingStore";
+import { isSlotWithinRange, timeSlots } from "@/lib/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -37,17 +37,20 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         <button className="rounded-lg bg-ink px-5 py-3 font-black uppercase text-white" type="submit">Open</button>
       </form>
 
-      <form className="mb-5 grid gap-3 rounded-lg bg-ink p-4 text-white ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_1fr_auto]" action="/api/admin/actions" method="post">
+      <form className="mb-5 grid gap-3 rounded-lg bg-ink p-4 text-white ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_1fr_1.4fr_auto]" action="/api/admin/actions" method="post">
         <input type="hidden" name="action" value="block-slot" />
         <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
         <select className="admin-input" name="date">
           {dates.map((scheduleDate) => <option key={scheduleDate} value={scheduleDate}>{scheduleDate}</option>)}
         </select>
-        <select className="admin-input" name="time">
-          {timeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+        <select className="admin-input" name="startTime" defaultValue="10:00 AM">
+          {timeSlots.map((time) => <option key={time} value={time}>Start {formatTime24(time)} / {time}</option>)}
+        </select>
+        <select className="admin-input" name="endTime" defaultValue="12:00 PM">
+          {endTimeSlots.map((time) => <option key={time} value={time}>End {formatTime24(time)} / {time}</option>)}
         </select>
         <input className="admin-input" name="reason" placeholder="Reason, e.g. personal / unavailable" />
-        <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white" type="submit">Block Time</button>
+        <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white" type="submit">Block Hours</button>
       </form>
 
       <section className="overflow-x-auto rounded-lg bg-white shadow-sm ring-1 ring-ink/10">
@@ -72,8 +75,9 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
               {schedule.map((day) => {
                 const slot = day.availability.find((item) => item.time === time);
                 const booking = day.bookings.find((item) => item.time === time && item.status !== "cancelled");
-                const block = day.blocks.find((item) => item.time === time);
+                const block = day.blocks.find((item) => isSlotWithinRange(time, item.startTime || item.time, item.endTime || getNextTimeSlot(item.time)));
                 const services = booking ? getBookingDetails(booking).map((detail) => detail.service).join(" + ") : "";
+                const isBlockStart = block ? time === (block.startTime || block.time) : false;
 
                 return (
                   <div className="min-h-28 border-b border-r border-ink/10 bg-white p-2" key={`${day.date}-${time}`}>
@@ -92,13 +96,16 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                           <p className="text-sm font-black uppercase">Blocked</p>
                           <StatusBadge status="blocked" />
                         </div>
+                        <p className="mt-2 text-xs font-black uppercase text-red-soft">{block.startTime || block.time} - {block.endTime || getNextTimeSlot(block.time)}</p>
                         <p className="mt-2 text-xs font-bold text-ash">{block.reason}</p>
-                        <form className="mt-3" action="/api/admin/actions" method="post">
-                          <input type="hidden" name="action" value="remove-block" />
-                          <input type="hidden" name="blockId" value={block.id} />
-                          <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-                          <button className="text-xs font-black uppercase text-red-soft" type="submit">Remove</button>
-                        </form>
+                        {isBlockStart ? (
+                          <form className="mt-3" action="/api/admin/actions" method="post">
+                            <input type="hidden" name="action" value="remove-block" />
+                            <input type="hidden" name="blockId" value={block.id} />
+                            <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+                            <button className="text-xs font-black uppercase text-red-soft" type="submit">Remove</button>
+                          </form>
+                        ) : null}
                       </div>
                     ) : (
                       <div className="grid h-full place-items-center rounded-lg bg-smoke text-center">
@@ -112,9 +119,43 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           ))}
         </div>
       </section>
+
+      <section className="mt-6 rounded-lg bg-white p-4 shadow-sm ring-1 ring-ink/10">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-red">Unavailable Hours</p>
+            <h2 className="mt-1 text-2xl font-black uppercase text-ink">Blocked time manager</h2>
+          </div>
+          <p className="max-w-xl text-sm font-bold leading-6 text-steel">Edit or remove phone bookings, personal time, and other unavailable windows. These blocks are used by the public booking calendar immediately.</p>
+        </div>
+        <div className="mt-4 grid gap-3">
+          {schedule.flatMap((day) => day.blocks.map((block) => ({ ...block, date: day.date }))).length ? (
+            schedule.flatMap((day) => day.blocks.map((block) => (
+              <form className="grid gap-3 rounded-lg bg-smoke p-3 md:grid-cols-[1fr_1fr_1fr_1.3fr_auto]" action="/api/admin/actions" method="post" key={block.id}>
+                <input type="hidden" name="action" value="update-block" />
+                <input type="hidden" name="blockId" value={block.id} />
+                <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+                <input className="admin-input" name="date" type="date" defaultValue={day.date} />
+                <select className="admin-input" name="startTime" defaultValue={block.startTime || block.time}>
+                  {timeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+                </select>
+                <select className="admin-input" name="endTime" defaultValue={block.endTime || getNextTimeSlot(block.time)}>
+                  {endTimeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+                </select>
+                <input className="admin-input" name="reason" defaultValue={block.reason} />
+                <button className="rounded-lg bg-ink px-4 py-3 text-xs font-black uppercase text-white" type="submit">Save</button>
+              </form>
+            )))
+          ) : (
+            <div className="rounded-lg bg-smoke p-4 text-sm font-bold text-steel">No blocked hours in this view.</div>
+          )}
+        </div>
+      </section>
     </>
   );
 }
+
+const endTimeSlots = [...timeSlots.slice(1), "8:00 PM"] as const;
 
 function formatTime24(time: string) {
   const match = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);

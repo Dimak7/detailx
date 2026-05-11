@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminUnauthorizedResponse, isAdminRequest } from "@/lib/adminAuth";
-import { getBookingById, updateBookingSchedule, updateBookingStatus, createScheduleBlock, deleteScheduleBlock, type BookingStatus } from "@/lib/bookingStore";
+import { getBookingById, updateBookingSchedule, updateBookingStatus, createScheduleBlock, deleteScheduleBlock, updateScheduleBlock, type BookingStatus } from "@/lib/bookingStore";
 import { updateBusinessMetricsSettings } from "@/lib/businessMetricsStore";
 import { sendClientPromotionEmail, sendCustomerBookingConfirmation } from "@/lib/resend";
 import { createStripeInvoiceForBooking, updateInvoiceStatus, type InvoiceStatus } from "@/lib/invoiceStore";
@@ -67,14 +67,33 @@ export async function POST(request: Request) {
 
     if (action === "block-slot") {
       handled = true;
-      console.info("Admin block slot action started", { date: String(formData.get("date") || ""), time: String(formData.get("time") || "") });
+      console.info("Admin block slot action started", {
+        date: String(formData.get("date") || ""),
+        startTime: String(formData.get("startTime") || formData.get("time") || ""),
+        endTime: String(formData.get("endTime") || ""),
+      });
       await createScheduleBlock({
         date: String(formData.get("date") || ""),
-        time: String(formData.get("time") || ""),
+        startTime: String(formData.get("startTime") || formData.get("time") || ""),
+        endTime: String(formData.get("endTime") || ""),
         reason: String(formData.get("reason") || "Unavailable"),
       });
-      console.info("Admin block slot action completed", { date: String(formData.get("date") || ""), time: String(formData.get("time") || "") });
-      adminMessage = "Time slot blocked.";
+      console.info("Admin block slot action completed", { date: String(formData.get("date") || "") });
+      adminMessage = "Time range blocked.";
+    }
+
+    if (action === "update-block") {
+      handled = true;
+      const blockId = String(formData.get("blockId") || "");
+      console.info("Admin update block action started", { blockId });
+      await updateScheduleBlock(blockId, {
+        date: String(formData.get("date") || ""),
+        startTime: String(formData.get("startTime") || ""),
+        endTime: String(formData.get("endTime") || ""),
+        reason: String(formData.get("reason") || "Unavailable"),
+      });
+      console.info("Admin update block action completed", { blockId });
+      adminMessage = "Time block updated.";
     }
 
     if (action === "remove-block") {

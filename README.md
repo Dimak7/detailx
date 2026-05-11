@@ -223,9 +223,17 @@ TELEGRAM_CHAT_ID=
 TELEGRAM_WEBHOOK_SECRET=
 ```
 
-Telegram runs only from server routes. Booking notifications send after a booking is saved, and failures are logged server-side without blocking the customer. For this phase, Telegram is notification-only; booking management happens inside `/admin`. New Telegram alerts include an admin booking link.
+Telegram runs only from server routes. Booking notifications send after a booking is saved, and failures are logged server-side without blocking the customer. New Telegram alerts include an admin booking link and a `➕ New Booking` button for phone/text bookings.
 
-`POST /api/telegram` remains available for old callback messages and replies that booking management has moved to `/admin`, but new booking notifications do not include management buttons.
+Set your bot webhook to `POST /api/telegram`. The webhook supports `/newbooking` and the `➕ New Booking` button, then walks through name, phone, date, time, service, vehicle, location, notes, and price. Manual Telegram bookings save with `source: telegram_manual`, do not require a customer email, and still block public availability.
+
+Daily schedule messages are sent by calling:
+
+```bash
+GET /api/telegram/daily-schedule?secret=YOUR_SECRET
+```
+
+Set `CRON_SECRET` to protect that endpoint. On Railway, add a cron job for 5:00 AM America/Chicago if your plan supports time zones. If the scheduler only accepts UTC, schedule `10:00 UTC` during standard time or `09:00 UTC` during daylight time. The endpoint computes "today" in `America/Chicago` before sending the Telegram schedule.
 
 ## Stripe invoices
 

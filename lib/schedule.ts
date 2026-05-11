@@ -26,3 +26,62 @@ export type SlotAvailability = {
 export function isTimeSlot(value: string): value is TimeSlot {
   return timeSlots.includes(value as TimeSlot);
 }
+
+export function parseTimeSlotToMinutes(value: string) {
+  const match = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) {
+    return null;
+  }
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const period = match[3].toUpperCase();
+
+  if (period === "PM" && hour !== 12) {
+    hour += 12;
+  }
+
+  if (period === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return hour * 60 + minute;
+}
+
+export function isSlotWithinRange(slot: string, startTime: string, endTime: string) {
+  const slotMinutes = parseTimeSlotToMinutes(slot);
+  const startMinutes = parseTimeSlotToMinutes(startTime);
+  const endMinutes = parseTimeSlotToMinutes(endTime);
+
+  if (slotMinutes === null || startMinutes === null || endMinutes === null) {
+    return false;
+  }
+
+  return slotMinutes >= startMinutes && slotMinutes < endMinutes;
+}
+
+export function doTimeRangesOverlap(firstStart: string, firstEnd: string, secondStart: string, secondEnd: string) {
+  const firstStartMinutes = parseTimeSlotToMinutes(firstStart);
+  const firstEndMinutes = parseTimeSlotToMinutes(firstEnd);
+  const secondStartMinutes = parseTimeSlotToMinutes(secondStart);
+  const secondEndMinutes = parseTimeSlotToMinutes(secondEnd);
+
+  if (firstStartMinutes === null || firstEndMinutes === null || secondStartMinutes === null || secondEndMinutes === null) {
+    return false;
+  }
+
+  return firstStartMinutes < secondEndMinutes && secondStartMinutes < firstEndMinutes;
+}
+
+export function assertTimeRange(startTime: string, endTime: string) {
+  if (!isTimeSlot(startTime) || parseTimeSlotToMinutes(endTime) === null) {
+    throw new Error("Choose valid start and end times.");
+  }
+
+  const startMinutes = parseTimeSlotToMinutes(startTime);
+  const endMinutes = parseTimeSlotToMinutes(endTime);
+
+  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+    throw new Error("End time must be after start time.");
+  }
+}

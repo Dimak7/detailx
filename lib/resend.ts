@@ -30,6 +30,10 @@ export function getResendFromEmail() {
 }
 
 export async function sendCustomerBookingConfirmation(booking: BookingEmail) {
+  if (!booking.email?.trim()) {
+    throw new Error("Customer email is missing; confirmation email was skipped.");
+  }
+
   await sendEmail({
     label: "customer-booking-confirmation",
     to: booking.email,
@@ -45,7 +49,7 @@ export async function sendBusinessBookingNotification(booking: BookingEmail) {
     to: getBusinessEmail(),
     subject: "New Booking - DETAILX Chicago",
     html: buildBusinessEmailHtml(booking),
-    replyTo: booking.email,
+    replyTo: booking.email || getBusinessEmail(),
   });
 }
 

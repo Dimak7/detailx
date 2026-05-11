@@ -37,8 +37,9 @@ async function sendEmail(booking: BookingInput & { id: string }): Promise<Notifi
   }
 
   try {
+    const customerEmail = booking.email?.trim();
     const [customerResult, businessResult] = await Promise.allSettled([
-      sendCustomerBookingConfirmation(booking),
+      customerEmail ? sendCustomerBookingConfirmation(booking) : Promise.resolve("skipped"),
       sendBusinessBookingNotification(booking),
     ]);
 

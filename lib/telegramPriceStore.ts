@@ -12,7 +12,7 @@ export type TelegramPriceUpdate = {
 
 export type TelegramPriceSession = {
   chatId: string;
-  step: "service" | "price" | "confirm";
+  step: "service" | "overrideChoice" | "price" | "confirm";
   service?: BookingService;
   pendingUpdate?: TelegramPriceUpdate;
   updatedAt: string;

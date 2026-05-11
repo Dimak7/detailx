@@ -6,6 +6,7 @@ const serviceTitles = [
   "Interior Full Detail",
   "Full Detail",
   "Deep Detail",
+  "Maintenance Detail",
   "Headlight Restoration",
   "Window Tint",
   "Ceramic Coating",
@@ -32,6 +33,8 @@ type VehiclePricedService = ServiceBase & {
 
 type StartingPricedService = ServiceBase & {
   startingPrice: number;
+  nonFixedPrice?: boolean;
+  discussionLabel?: string;
 };
 
 export type PricedService = VehiclePricedService | StartingPricedService;
@@ -125,6 +128,24 @@ export const basePricedServices = [
       "Extra interior detail work",
       "Extra exterior grime cleanup",
       "Free wax included",
+    ],
+  },
+  {
+    title: "Maintenance Detail",
+    code: "MD",
+    tone: "Ongoing upkeep",
+    description: "For regular clients who want ongoing cleaning and upkeep.",
+    image: "/brand/detailx-work/black-mercedes-rear.jpg",
+    category: "Detailing",
+    ctaLabel: "Book Maintenance Detail",
+    startingPrice: 0,
+    nonFixedPrice: true,
+    discussionLabel: "Price discussed after vehicle review",
+    includes: [
+      "Maintenance cleaning and upkeep",
+      "Service scope reviewed on arrival",
+      "Vehicle condition check",
+      "Price discussed after inspection",
     ],
   },
   {
@@ -232,7 +253,7 @@ export function resolvePricedServices(overrides: Partial<Record<BookingService, 
       return service;
     }
 
-    if ("prices" in service) {
+  if ("prices" in service) {
       return {
         ...service,
         prices: {
@@ -271,27 +292,34 @@ export function getPriceQuote(
       label: "Estimate pending",
       baseLabel: "Estimate pending",
       isStartingAt: true,
+      isDiscussionOnly: false,
       discountPercent,
     };
   }
 
   let amount = 0;
   let isStartingAt = false;
+  let isDiscussionOnly = false;
 
   if ("prices" in servicePricing) {
     amount = servicePricing.prices[vehicleType as VehicleType] ?? servicePricing.prices.Sedan;
+  } else if (servicePricing.nonFixedPrice && servicePricing.startingPrice <= 0) {
+    isDiscussionOnly = true;
   } else {
     amount = servicePricing.startingPrice;
     isStartingAt = true;
   }
 
   const discountedAmount = Math.round(amount * (1 - discountPercent / 100));
+  const priceLabel = isDiscussionOnly ? "To be discussed" : formatPrice(discountedAmount, isStartingAt);
+  const baseLabel = isDiscussionOnly ? "To be discussed" : formatPrice(amount, isStartingAt);
 
   return {
     amount: discountedAmount,
-    label: formatPrice(discountedAmount, isStartingAt),
-    baseLabel: formatPrice(amount, isStartingAt),
+    label: priceLabel,
+    baseLabel,
     isStartingAt,
+    isDiscussionOnly,
     discountPercent,
   };
 }
@@ -310,6 +338,10 @@ export function getStartingPriceLabel(service: string, services: readonly Priced
     return isFlatPrice ? `$${startingPrice}` : `Starting at $${startingPrice}`;
   }
 
+  if (servicePricing.nonFixedPrice && servicePricing.startingPrice <= 0) {
+    return servicePricing.discussionLabel || "Price discussed after inspection";
+  }
+
   return `Starting at $${servicePricing.startingPrice}+`;
 }
 
@@ -324,6 +356,10 @@ export function getTelegramPriceLabel(service: PricedService) {
     }
 
     return prices.map(([vehicle, price]) => `$${price} ${vehicle.toLowerCase()}`).join(" / ");
+  }
+
+  if (service.nonFixedPrice && service.startingPrice <= 0) {
+    return "non-fixed (price discussed after inspection)";
   }
 
   return `starts at $${service.startingPrice}`;
@@ -343,14 +379,16 @@ export function buildBookingEstimate(details: BookingDetailSelection[], services
       discountPercent,
       amount: quote.amount,
       isStartingAt: quote.isStartingAt,
+      isDiscussionOnly: quote.isDiscussionOnly,
     };
   });
   const totalAmount = normalizedDetails.reduce((total, detail) => total + detail.amount, 0);
   const hasStartingAtPricing = normalizedDetails.some((detail) => detail.isStartingAt);
+  const hasDiscussionPricing = normalizedDetails.some((detail) => detail.isDiscussionOnly);
 
   return {
     details: normalizedDetails.map(({ amount, isStartingAt, ...detail }) => detail),
-    estimatedPrice: formatPrice(totalAmount, hasStartingAtPricing),
+    estimatedPrice: hasDiscussionPricing ? "To be discussed" : formatPrice(totalAmount, hasStartingAtPricing),
     totalAmount,
     hasStartingAtPricing,
     discountApplied: normalizedDetails.length > 1,

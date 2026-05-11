@@ -155,9 +155,61 @@ export async function handleTelegramCallbackQuery(callbackQuery: TelegramCallbac
         return { ok: false, message: "Service not found." };
       }
 
+      if (isNonFixedService(service)) {
+        await promptForNonFixedService(chatId, service);
+        await answerTelegramCallback(callbackQuery.id, "Non-fixed service selected.");
+        return { ok: true, message: "Non-fixed service selected." };
+      }
+
       await promptForServicePrice(chatId, service);
       await answerTelegramCallback(callbackQuery.id, "Send the new price.");
       return { ok: true, message: "Price prompt sent." };
+    }
+
+    if (data.startsWith("prices_override:")) {
+      if (!isAdminChat(chatId)) {
+        await sendTelegramMessage(chatId, "You are not authorized to change prices.");
+        await answerTelegramCallback(callbackQuery.id, "Not authorized.");
+        return { ok: false, message: "Unauthorized Telegram price access." };
+      }
+
+      const service = await getServiceFromCallbackCode(data.slice("prices_override:".length));
+      if (!service) {
+        await answerTelegramCallback(callbackQuery.id, "Service not found.");
+        return { ok: false, message: "Service not found." };
+      }
+
+      await promptForServicePrice(chatId, service);
+      await answerTelegramCallback(callbackQuery.id, "Send override price.");
+      return { ok: true, message: "Override prompt sent." };
+    }
+
+    if (data.startsWith("prices_clear:")) {
+      if (!isAdminChat(chatId)) {
+        await sendTelegramMessage(chatId, "You are not authorized to change prices.");
+        await answerTelegramCallback(callbackQuery.id, "Not authorized.");
+        return { ok: false, message: "Unauthorized Telegram price access." };
+      }
+
+      const service = await getServiceFromCallbackCode(data.slice("prices_clear:".length));
+      if (!service) {
+        await answerTelegramCallback(callbackQuery.id, "Service not found.");
+        return { ok: false, message: "Service not found." };
+      }
+
+      await updateServicePricing(service.title, { startingPrice: 0 });
+      await clearTelegramPriceSession(chatId);
+      revalidatePath("/");
+      revalidatePath("/admin/bookings");
+      revalidatePath("/admin/settings");
+      console.info("Service price updated", {
+        chatId,
+        service: service.title,
+        update: { startingPrice: 0 },
+      });
+      await sendTelegramMessage(chatId, "Service kept as non-fixed price.");
+      await answerTelegramCallback(callbackQuery.id, "Kept non-fixed.");
+      return { ok: true, message: "Service kept as non-fixed price." };
     }
 
     if (data === "prices_cancel") {
@@ -456,6 +508,32 @@ async function promptForServicePrice(chatId: string, service: PricedService) {
   await sendTelegramMessage(chatId, prompt);
 }
 
+async function promptForNonFixedService(chatId: string, service: PricedService) {
+  await saveTelegramPriceSession({
+    chatId,
+    step: "overrideChoice",
+    service: service.title,
+    updatedAt: new Date().toISOString(),
+  });
+
+  await sendTelegramMessage(
+    chatId,
+    [
+      `Selected: ${escapeTelegramHtml(service.title)}`,
+      `Current: ${escapeTelegramHtml(getTelegramPriceLabel(service))}`,
+      "",
+      "This service is non-fixed.",
+      "Choose Set Override only if you want a temporary dollar price.",
+    ].join("\n"),
+    {
+      inline_keyboard: [[
+        { text: "Set Override", callback_data: `prices_override:${service.code}` },
+        { text: "Use Non-Fixed", callback_data: `prices_clear:${service.code}` },
+      ]],
+    }
+  );
+}
+
 async function processPriceInput(session: TelegramPriceSession, text: string) {
   if (session.step !== "price" || !session.service) {
     throw new Error("Choose a service first.");
@@ -658,6 +736,10 @@ function getPrimaryPriceLabel(service: PricedService) {
     return `$${service.prices.Sedan}`;
   }
 
+  if (isNonFixedService(service)) {
+    return "To be discussed";
+  }
+
   return `$${service.startingPrice}`;
 }
 
@@ -699,6 +781,10 @@ function parsePriceUpdate(text: string, service: PricedService): TelegramPriceUp
     service: service.title,
     startingPrice: amount,
   };
+}
+
+function isNonFixedService(service: PricedService) {
+  return !("prices" in service) && Boolean(service.nonFixedPrice);
 }
 
 function buildAdminBookingUrl(booking: TelegramBooking) {

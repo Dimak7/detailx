@@ -6,6 +6,7 @@ export type ServiceTier = {
   tone: string;
   description: string;
   price: string;
+  pricingNote?: string;
   pricing?: {
     sedan: string;
     suv: string;
@@ -28,6 +29,9 @@ export function buildServiceTiers(pricedServices: readonly PricedService[]): Ser
       tone: service.tone,
       description: service.description,
       price: getStartingPriceLabel(service.title, pricedServices),
+      pricingNote: service.title === "Boat Detailing"
+        ? "Final price depends on boat size, condition, oxidation, and service package."
+        : undefined,
       pricing: "prices" in service ? {
         sedan: `$${service.prices.Sedan}`,
         suv: `$${service.prices.SUV}`,

@@ -1,6 +1,8 @@
-export const vehicleTypes = ["Sedan", "SUV", "Truck"] as const;
+export const vehicleTypes = ["Sedan", "SUV", "Truck", "Boat"] as const;
+export const roadVehicleTypes = ["Sedan", "SUV", "Truck"] as const;
 
 export type VehicleType = (typeof vehicleTypes)[number];
+export type RoadVehicleType = (typeof roadVehicleTypes)[number];
 const serviceTitles = [
   "Exterior Detail",
   "Interior Full Detail",
@@ -11,6 +13,7 @@ const serviceTitles = [
   "Window Tint",
   "Ceramic Coating",
   "Paint Correction",
+  "Boat Detailing",
 ] as const;
 
 export type BookingService = (typeof serviceTitles)[number];
@@ -28,7 +31,7 @@ type ServiceBase = {
 };
 
 type VehiclePricedService = ServiceBase & {
-  prices: Record<VehicleType, number>;
+  prices: Record<RoadVehicleType, number>;
 };
 
 type StartingPricedService = ServiceBase & {
@@ -214,12 +217,29 @@ export const basePricedServices = [
       "Protection recommendation after correction",
     ],
   },
+  {
+    title: "Boat Detailing",
+    code: "BD",
+    tone: "Marine finish",
+    description: "Premium mobile boat detailing for interior, exterior, vinyl, compartments, oxidation, and protection. We come to you and clean it the right way.",
+    image: "/brand/detailx-work/black-porsche-studio.jpg",
+    category: "Marine / Boat Detailing",
+    ctaLabel: "Book Boat Detail",
+    startingPrice: 300,
+    includes: [
+      "Interior and exterior boat detailing",
+      "Vinyl, seating, and compartment cleaning",
+      "Hull and surface cleanup based on condition",
+      "Oxidation review and service planning",
+      "Protection recommendations after inspection",
+    ],
+  },
 ] satisfies readonly PricedService[];
 
 export const pricedServices = basePricedServices;
 
 export type ServicePriceOverride = {
-  prices?: Partial<Record<VehicleType, number>>;
+  prices?: Partial<Record<RoadVehicleType, number>>;
   startingPrice?: number;
 };
 
@@ -247,6 +267,22 @@ export type BookingEstimate = {
 };
 
 export const freeWaxBonusLabel = "Free wax included";
+
+export function isBoatDetailingService(service: string) {
+  return service === "Boat Detailing";
+}
+
+export function getDisplayAssetLabel(service: string) {
+  return isBoatDetailingService(service) ? "Boat" : "Vehicle";
+}
+
+export function getDisplayAssetDetail(service: string, vehicleType: string) {
+  if (isBoatDetailingService(service)) {
+    return vehicleType === "Boat" ? "Boat" : vehicleType || "Boat";
+  }
+
+  return vehicleType || "Vehicle not provided";
+}
 
 export function resolvePricedServices(overrides: Partial<Record<BookingService, ServicePriceOverride>> = {}) {
   return basePricedServices.map((service) => {
@@ -305,7 +341,7 @@ export function getPriceQuote(
   let isDiscussionOnly = false;
 
   if ("prices" in servicePricing) {
-    amount = servicePricing.prices[vehicleType as VehicleType] ?? servicePricing.prices.Sedan;
+    amount = servicePricing.prices[vehicleType as RoadVehicleType] ?? servicePricing.prices.Sedan;
   } else if (servicePricing.nonFixedPrice && servicePricing.startingPrice <= 0) {
     isDiscussionOnly = true;
   } else {

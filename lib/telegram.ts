@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { assertFutureDate, bookingServices, type BookingInput } from "./bookingSchema";
 import { listBookingsByDate, listScheduleBlocks, saveBooking, type BookingStatus, type StoredBooking } from "./bookingStore";
-import { buildBookingEstimate, freeWaxBonusLabel, getTelegramPriceLabel, hasFreeWaxBonus, vehicleTypes, type BookingService, type PricedService, type VehicleType } from "./pricing";
+import { buildBookingEstimate, freeWaxBonusLabel, getDisplayAssetLabel, getTelegramPriceLabel, hasFreeWaxBonus, isBoatDetailingService, vehicleTypes, type BookingService, type PricedService, type VehicleType } from "./pricing";
 import { isTimeSlot, parseTimeSlotToMinutes, timeSlots, type TimeSlot } from "./schedule";
 import { getPricedServices, updateServicePricing } from "./servicePricingStore";
 import {
@@ -382,7 +382,7 @@ async function processManualBookingInput(session: TelegramManualSession, text: s
     }
     nextSession.data.service = service;
     nextSession.step = "vehicleType";
-    await saveAndPrompt(nextSession, "Vehicle type? Sedan, SUV, or Truck.");
+    await saveAndPrompt(nextSession, isBoatDetailingService(service) ? "Asset type? Reply Boat." : "Vehicle type? Sedan, SUV, Truck, or Boat.");
     return;
   }
 
@@ -627,7 +627,7 @@ async function buildTelegramBookingMessage(booking: TelegramBooking) {
     ...estimate.details.flatMap((detail) => [
       `<b>Detail ${detail.lineNumber}</b>`,
       `Service: ${escapeTelegramHtml(detail.service)}`,
-      `Vehicle: ${escapeTelegramHtml(detail.vehicleType)}`,
+      `${escapeTelegramHtml(getDisplayAssetLabel(detail.service))}: ${escapeTelegramHtml(detail.vehicleType)}`,
       `Price: ${escapeTelegramHtml(detail.estimatedPrice)}`,
       "",
     ]),
@@ -653,7 +653,7 @@ function buildTodayScheduleMessage(bookings: StoredBooking[], blocks: Awaited<Re
     ...activeBookings.flatMap((booking) => [
       `${escapeTelegramHtml(booking.time)} - ${escapeTelegramHtml(booking.name)}`,
       `Phone: ${escapeTelegramHtml(booking.phone)}`,
-      ...(booking.carModel ? [`Car: ${escapeTelegramHtml(booking.carModel)}`] : []),
+      ...(booking.carModel ? [`${escapeTelegramHtml(isBoatDetailingService(booking.service) ? "Boat size" : "Car")}: ${escapeTelegramHtml(booking.carModel)}`] : []),
       `Address: ${escapeTelegramHtml(booking.address)}`,
       `Price: ${escapeTelegramHtml(booking.estimatedPrice || "Estimate pending")}`,
       ...(hasFreeWaxBonus(booking.details?.length ? booking.details : [{ service: booking.service }]) ? [`Bonus: ${escapeTelegramHtml(freeWaxBonusLabel)}`] : []),
@@ -683,7 +683,7 @@ async function buildManualBookingConfirmation(session: TelegramManualSession) {
     `Date: ${escapeTelegramHtml(data.date || "")}`,
     `Time: ${escapeTelegramHtml(data.time || "")}`,
     `Service: ${escapeTelegramHtml(data.service || "")}`,
-    `Vehicle: ${escapeTelegramHtml(data.vehicleType || "")}`,
+    `${escapeTelegramHtml(isBoatDetailingService(data.service || "") ? "Asset" : "Vehicle")}: ${escapeTelegramHtml(data.vehicleType || "")}`,
     `Address: ${escapeTelegramHtml(data.address || "")}`,
     `Price: ${escapeTelegramHtml(data.price || estimate)}`,
     `Notes: ${escapeTelegramHtml(data.notes || "N/A")}`,

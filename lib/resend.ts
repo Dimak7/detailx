@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import type { BookingInput } from "./bookingSchema";
-import { buildBookingEstimate, freeWaxBonusLabel, hasFreeWaxBonus } from "./pricing";
+import { buildBookingEstimate, freeWaxBonusLabel, getDisplayAssetLabel, hasFreeWaxBonus, isBoatDetailingService } from "./pricing";
 
 type BookingEmail = BookingInput & { id: string };
 
@@ -186,7 +186,7 @@ function buildCustomerEmailHtml(booking: BookingEmail) {
             ${buildSummaryLine("Date", booking.date)}
             ${buildSummaryLine("Time", booking.time)}
             ${buildSummaryLine("Location", booking.address)}
-            ${booking.carModel ? buildSummaryLine("Car make/model", booking.carModel) : ""}
+            ${booking.carModel ? buildSummaryLine(getAssetSummaryLabel(booking.service), booking.carModel) : ""}
             ${hasFreeWaxBonus(detailItems) ? buildSummaryLine("Bonus", freeWaxBonusLabel) : ""}
             ${notes.length ? buildSummaryLine("Notes", notes.join(" | ")) : ""}
             ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
@@ -231,7 +231,7 @@ function buildBusinessEmailHtml(booking: BookingEmail) {
             ${buildSummaryLine("Date", booking.date)}
             ${buildSummaryLine("Time", booking.time)}
             ${buildSummaryLine("Location", booking.address)}
-            ${booking.carModel ? buildSummaryLine("Car make/model", booking.carModel) : ""}
+            ${booking.carModel ? buildSummaryLine(getAssetSummaryLabel(booking.service), booking.carModel) : ""}
             ${hasFreeWaxBonus(detailItems) ? buildSummaryLine("Bonus", freeWaxBonusLabel) : ""}
             ${notes.length ? buildSummaryLine("Notes", notes.join(" | ")) : ""}
             ${buildSummaryLine("Estimated total", booking.estimatedPrice || "Estimate pending", true)}
@@ -256,7 +256,7 @@ function buildGoogleCalendarUrl(booking: BookingEmail) {
   const detailItems = getEmailDetailItems(booking);
   const details = [
     ...detailItems.map((detail) => `Detail ${detail.lineNumber}: ${detail.service} / ${detail.vehicleType} / ${detail.estimatedPrice}`),
-    ...(booking.carModel ? [`Car make/model: ${booking.carModel}`] : []),
+    ...(booking.carModel ? [`${getAssetSummaryLabel(booking.service)}: ${booking.carModel}`] : []),
     ...(hasFreeWaxBonus(detailItems) ? [`Bonus: ${freeWaxBonusLabel}`] : []),
     `Estimated price: ${booking.estimatedPrice || "Estimate pending"}`,
     `Booking ID: ${booking.id}`,
@@ -285,7 +285,7 @@ function buildEmailDetailRow(detail: ReturnType<typeof getEmailDetailItems>[numb
   return `
     <div style="border-bottom:1px solid #e4e4df;padding:16px">
       <p style="margin:0;color:#73777c;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase">Detail ${detail.lineNumber}</p>
-      <p style="margin:6px 0 0;color:#050506;font-size:17px;font-weight:900">${escapeHtml(detail.service)} / ${escapeHtml(detail.vehicleType)}</p>
+      <p style="margin:6px 0 0;color:#050506;font-size:17px;font-weight:900">${escapeHtml(detail.service)} / ${escapeHtml(formatDetailAsset(detail.service, detail.vehicleType))}</p>
       <p style="margin:4px 0 0;color:#c1121f;font-size:14px;font-weight:900">${escapeHtml(detail.estimatedPrice)}</p>
     </div>
   `;
@@ -298,6 +298,14 @@ function buildSummaryLine(label: string, value: string, strong = false) {
       <p style="margin:6px 0 0;color:${strong ? "#ffffff" : "#050506"};font-size:${strong ? "22px" : "15px"};font-weight:${strong ? "900" : "700"}">${escapeHtml(value)}</p>
     </div>
   `;
+}
+
+function getAssetSummaryLabel(service: string) {
+  return isBoatDetailingService(service) ? "Boat size / length" : "Car make/model";
+}
+
+function formatDetailAsset(service: string, asset: string) {
+  return isBoatDetailingService(service) ? getDisplayAssetLabel(service) : asset;
 }
 
 function buildGoogleDateTime(dateValue: string, timeValue: string, addHours: number) {

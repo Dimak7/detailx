@@ -9,6 +9,7 @@ type ServiceMenuItem = {
   tone: string;
   description: string;
   price: string;
+  pricingNote?: string;
   pricing?: {
     sedan: string;
     suv: string;
@@ -54,6 +55,7 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
               </div>
               <div className="p-5">
                 <p className={`text-sm leading-7 ${isFeatured ? "text-ash" : "text-steel"}`}>{service.description}</p>
+                {service.pricingNote ? <p className={`mt-3 text-xs leading-5 ${isFeatured ? "text-ash" : "text-steel"}`}>{service.pricingNote}</p> : null}
                 <ServicePriceDisplay service={service} featured={isFeatured} />
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -104,9 +106,9 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="eyebrow">Premium add-ons</p>
-            <h3 className="text-3xl font-black uppercase leading-none text-ink md:text-4xl">Protection and correction services.</h3>
+            <h3 className="text-3xl font-black uppercase leading-none text-ink md:text-4xl">Protection and specialty services.</h3>
           </div>
-          <p className="max-w-2xl text-sm leading-7 text-steel">For coating, tint, or correction work, open the details to review what is included before you reserve a time.</p>
+          <p className="max-w-2xl text-sm leading-7 text-steel">For coating, tint, correction, or boat work, open the details to review what is included before you reserve a time.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {premiumServices.map((service) => {
@@ -120,6 +122,7 @@ export function ServiceMenu({ services }: { services: readonly ServiceMenuItem[]
                 <p className="mt-8 text-sm font-black uppercase text-red">{service.tone}</p>
                 <h4 className="mt-3 text-2xl font-black uppercase leading-none">{service.title}</h4>
                 <p className="mt-4 text-sm leading-7 text-steel">{service.description}</p>
+                {service.pricingNote ? <p className="mt-3 text-xs leading-5 text-steel">{service.pricingNote}</p> : null}
                 <ServicePriceDisplay service={service} featured={false} />
                 <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
                   <button

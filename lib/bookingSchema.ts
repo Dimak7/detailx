@@ -12,6 +12,7 @@ export const bookingServices = [
   "Ceramic Coating",
   "Window Tint",
   "Paint Correction",
+  "Boat Detailing",
 ] as const;
 
 export const vehicleTypes = pricedVehicleTypes;

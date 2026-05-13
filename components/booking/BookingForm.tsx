@@ -8,7 +8,8 @@ import {
   buildBookingEstimate,
   freeWaxBonusLabel,
   getStartingPriceLabel,
-  vehicleTypes,
+  isBoatDetailingService,
+  roadVehicleTypes,
   type PricedService,
   type BookingDetailSelection,
   type BookingDetailEstimate,
@@ -34,7 +35,11 @@ type BookingConfirmation = {
   estimatedTotal: string;
   bonusIncluded: boolean;
   emailSent: boolean;
+  boatSelected: boolean;
+  assetDetail: string;
 };
+
+const boatServiceTitle = "Boat Detailing";
 
 export function BookingForm({ initialServices }: { initialServices: readonly PricedService[] }) {
   const searchParams = useSearchParams();
@@ -62,6 +67,13 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
   const estimatedPrice = bookingEstimate.estimatedPrice;
   const totalDetails = selectedDetails.length;
   const primaryDetail = selectedDetails[0] ?? { service: initialServices[0].title, vehicleType: selectedVehicle };
+  const boatSelected = selectedDetails.some((detail) => isBoatDetailingService(detail.service));
+  const assetLabel = boatSelected ? "Boat size / length" : "Car make/model (optional)";
+  const assetPlaceholder = boatSelected ? "24 ft pontoon / 32 ft cruiser / jet boat" : "BMW X3 / Honda Civic / Ford Transit";
+  const notesLabel = boatSelected ? "Condition or special notes" : "Optional notes";
+  const notesPlaceholder = boatSelected
+    ? "Condition, oxidation, vinyl needs, compartments, dock access, or protection goals..."
+    : "Parking access, pet hair, stains, coating goals, tint questions...";
   const availableSlotByTime = new Map(availability.map((slot) => [slot.time, slot]));
 
   useEffect(() => {
@@ -83,7 +95,20 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
 
       return next;
     });
+
+    setSelectedVehicle(isBoatDetailingService(requestedService) ? "Boat" : "Sedan");
   }, [initialServices, searchParams]);
+
+  useEffect(() => {
+    if (boatSelected && selectedVehicle !== "Boat") {
+      setSelectedVehicle("Boat");
+      return;
+    }
+
+    if (!boatSelected && selectedVehicle === "Boat") {
+      setSelectedVehicle("Sedan");
+    }
+  }, [boatSelected, selectedVehicle]);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -182,6 +207,8 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
         estimatedTotal: estimatedPrice,
         bonusIncluded: bookingEstimate.bonusIncluded,
         emailSent: result.status === "booking_saved_email_sent" || Boolean(result.emailSent),
+        boatSelected,
+        assetDetail: String(payload.carModel || ""),
       });
       (formRef.current ?? form)?.reset();
       setServiceCounts(buildInitialServiceCounts(initialServices));
@@ -214,6 +241,18 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
 
   function updateServiceCount(service: BookingService, change: number) {
     setServiceCounts((current) => {
+      if (change > 0 && isBoatDetailingService(service)) {
+        const next = buildEmptyServiceCounts(initialServices);
+        next[service] = 1;
+        return next;
+      }
+
+      if (change > 0 && current[boatServiceTitle] > 0 && service !== boatServiceTitle) {
+        const next = buildEmptyServiceCounts(initialServices);
+        next[service] = 1;
+        return next;
+      }
+
       const nextTotal = getDetailCount(current) + change;
       const nextCount = Math.max(0, current[service] + change);
 
@@ -275,29 +314,39 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
                 <p className={`text-xs font-black uppercase ${active ? "text-red-soft" : "text-red"}`}>{service.tone}</p>
                 <h4 className="mt-1 text-lg font-black uppercase leading-none">{service.title}</h4>
                 <p className={`mt-2 text-sm font-black ${active ? "text-white" : "text-ink"}`}>{getStartingPriceLabel(service.title, initialServices)}</p>
+                <p className={`mt-2 text-sm leading-6 ${active ? "text-ash" : "text-steel"}`}>{service.description}</p>
               </div>
             </article>
           );
         })}
       </div>
 
-      <div className="mt-4 rounded-lg border border-ink/10 bg-smoke p-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle size</p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {vehicleTypes.map((vehicle) => (
-              <button
-                className={`rounded-lg px-3 py-3 text-sm font-black uppercase transition ${selectedVehicle === vehicle ? "bg-red text-white shadow-[0_12px_30px_rgba(193,18,31,0.2)]" : "bg-white text-ink ring-1 ring-ink/10 hover:ring-red/40"}`}
-                key={vehicle}
-                onClick={() => setSelectedVehicle(vehicle)}
-                type="button"
-              >
-                {vehicle}
-              </button>
-            ))}
+      {boatSelected ? (
+        <div className="mt-4 rounded-lg border border-red/15 bg-red-soft/60 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Boat detailing</p>
+          <p className="mt-2 text-sm font-bold leading-6 text-ink">
+            Boat Detailing uses a starting base price of $300. Final pricing depends on boat size, condition, oxidation, and service package.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-lg border border-ink/10 bg-smoke p-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Vehicle size</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {roadVehicleTypes.map((vehicle) => (
+                <button
+                  className={`rounded-lg px-3 py-3 text-sm font-black uppercase transition ${selectedVehicle === vehicle ? "bg-red text-white shadow-[0_12px_30px_rgba(193,18,31,0.2)]" : "bg-white text-ink ring-1 ring-ink/10 hover:ring-red/40"}`}
+                  key={vehicle}
+                  onClick={() => setSelectedVehicle(vehicle)}
+                  type="button"
+                >
+                  {vehicle}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-4 rounded-lg bg-smoke p-4 ring-1 ring-ink/10">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-red">Booking summary</p>
@@ -306,7 +355,7 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
             <div className="flex min-w-0 items-start justify-between gap-4 rounded-lg bg-white px-4 py-3" key={detail.lineNumber}>
               <div className="min-w-0">
                 <p className="font-black uppercase leading-tight">Detail {detail.lineNumber}: {detail.service}</p>
-                <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType}</p>
+                <p className="mt-1 text-sm font-bold text-steel">{detail.vehicleType === "Boat" ? "Boat" : detail.vehicleType}</p>
               </div>
               <p className="shrink-0 text-right font-black text-ink">{detail.estimatedPrice}</p>
             </div>
@@ -396,9 +445,9 @@ export function BookingForm({ initialServices }: { initialServices: readonly Pri
         <label className="form-label">Phone<input className="field" name="phone" required placeholder="Your phone number" /></label>
         <label className="form-label">Email<input className="field" name="email" type="email" required placeholder="you@email.com" /></label>
         <label className="form-label">Service location<input className="field" name="address" minLength={5} required placeholder="Chicago address or neighborhood" /></label>
-        <label className="form-label md:col-span-2">Car make/model (optional)<input className="field" name="carModel" maxLength={120} placeholder="BMW X3 / Honda Civic / Ford Transit" /></label>
+        <label className="form-label md:col-span-2">{assetLabel}<input className="field" name="carModel" maxLength={120} placeholder={assetPlaceholder} /></label>
       </div>
-      <label className="form-label mt-4">Optional notes<textarea className="field min-h-28 resize-y" name="notes" maxLength={800} placeholder="Parking access, pet hair, stains, coating goals, tint questions..." /></label>
+      <label className="form-label mt-4">{notesLabel}<textarea className="field min-h-28 resize-y" name="notes" maxLength={800} placeholder={notesPlaceholder} /></label>
       <button className="mt-5 w-full rounded-lg bg-red px-6 py-4 font-black uppercase text-white shadow-[0_16px_42px_rgba(193,18,31,0.25)] transition hover:-translate-y-0.5 hover:bg-red-dark disabled:cursor-not-allowed disabled:opacity-60" disabled={loading} type="submit">
         {loading ? "Requesting..." : `Request Booking - ${estimatedPrice}`}
       </button>
@@ -507,6 +556,7 @@ function BookingConfirmationOverlay({
                 <div className="flex justify-between gap-4"><span>Date</span><span className="text-right text-ink">{confirmation.date}</span></div>
                 <div className="flex justify-between gap-4"><span>Time</span><span className="text-right text-ink">{confirmation.time}</span></div>
                 <div className="flex justify-between gap-4"><span>Location</span><span className="min-w-0 break-words text-right text-ink">{confirmation.location}</span></div>
+                {confirmation.assetDetail ? <div className="flex justify-between gap-4"><span>{confirmation.boatSelected ? "Boat size / length" : "Car make/model"}</span><span className="min-w-0 break-words text-right text-ink">{confirmation.assetDetail}</span></div> : null}
               </div>
               <div className="mt-4 flex items-center justify-between rounded-lg bg-ink px-4 py-4 text-white">
                 <span className="text-sm font-black uppercase text-ash">Estimated total</span>
@@ -532,6 +582,13 @@ function buildDetailsFromCounts(counts: ServiceCounts, vehicleType: VehicleType,
 function buildInitialServiceCounts(services: readonly PricedService[]) {
   return services.reduce((counts, service, index) => {
     counts[service.title] = index === 0 ? 1 : 0;
+    return counts;
+  }, {} as ServiceCounts);
+}
+
+function buildEmptyServiceCounts(services: readonly PricedService[]) {
+  return services.reduce((counts, service) => {
+    counts[service.title] = 0;
     return counts;
   }, {} as ServiceCounts);
 }

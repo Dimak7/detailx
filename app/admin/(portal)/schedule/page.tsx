@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { AdminActionForm } from "@/components/admin/AdminActionForm";
-import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
+import { AdminErrorBanner, AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
+import { loadAdminData } from "@/lib/adminPageData";
 import { getBookingDetails, addDays, getDateString } from "@/lib/adminData";
 import { getAvailability, getNextTimeSlot, listBookingsByDate, listScheduleBlocks } from "@/lib/bookingStore";
 import { isSlotWithinRange, timeSlots } from "@/lib/schedule";
@@ -13,16 +14,29 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
   const date = params?.date || getDateString(new Date());
   const view = params?.view === "day" ? "day" : "week";
   const dates = view === "week" ? Array.from({ length: 7 }, (_, index) => getDateString(addDays(new Date(`${date}T00:00:00`), index))) : [date];
-  const schedule = await Promise.all(dates.map(async (scheduleDate) => ({
-    date: scheduleDate,
-    availability: await getAvailability(scheduleDate),
-    bookings: await listBookingsByDate(scheduleDate),
-    blocks: await listScheduleBlocks(scheduleDate),
-  })));
+  const scheduleState = await loadAdminData(
+    "schedule view",
+    () =>
+      Promise.all(dates.map(async (scheduleDate) => ({
+        date: scheduleDate,
+        availability: await getAvailability(scheduleDate),
+        bookings: await listBookingsByDate(scheduleDate),
+        blocks: await listScheduleBlocks(scheduleDate),
+      }))),
+    dates.map((scheduleDate) => ({
+      date: scheduleDate,
+      availability: timeSlots.map((time) => ({ time, available: false as const, reason: undefined })),
+      bookings: [],
+      blocks: [],
+    })),
+    "Schedule data is temporarily unavailable. The error was logged on the server."
+  );
+  const schedule = scheduleState.data;
 
   return (
     <>
       <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
+      <AdminErrorBanner message={scheduleState.error} />
       <AdminPageHeader
         eyebrow="Calendar"
         title="Schedule"
@@ -38,24 +52,21 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         <button className="rounded-lg bg-ink px-5 py-3 font-black uppercase text-white" type="submit">Open</button>
       </form>
 
-      <AdminActionForm className="mb-5 grid gap-3 rounded-lg bg-ink p-4 text-white ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
-        {({ pending }) => (
-          <>
-            <input type="hidden" name="action" value="block-slot" />
-            <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-            <select className="admin-input" name="date">
-              {dates.map((scheduleDate) => <option key={scheduleDate} value={scheduleDate}>{scheduleDate}</option>)}
-            </select>
-            <select className="admin-input" name="startTime" defaultValue="10:00 AM">
-              {timeSlots.map((time) => <option key={time} value={time}>Start {formatTime24(time)} / {time}</option>)}
-            </select>
-            <select className="admin-input" name="endTime" defaultValue="12:00 PM">
-              {endTimeSlots.map((time) => <option key={time} value={time}>End {formatTime24(time)} / {time}</option>)}
-            </select>
-            <input className="admin-input" name="reason" placeholder="Reason, e.g. personal / unavailable" />
-            <button className="rounded-lg bg-red px-5 py-3 font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Blocking..." : "Block Hours"}</button>
-          </>
-        )}
+      <AdminActionForm className="mb-5 rounded-lg bg-ink p-4 text-white ring-1 ring-ink/10" pendingLabel="Blocking..." submitClassName="rounded-lg bg-red px-5 py-3 font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" submitLabel="Block Hours">
+        <input type="hidden" name="action" value="block-slot" />
+        <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
+          <select className="admin-input" name="date">
+            {dates.map((scheduleDate) => <option key={scheduleDate} value={scheduleDate}>{scheduleDate}</option>)}
+          </select>
+          <select className="admin-input" name="startTime" defaultValue="10:00 AM">
+            {timeSlots.map((time) => <option key={time} value={time}>Start {formatTime24(time)} / {time}</option>)}
+          </select>
+          <select className="admin-input" name="endTime" defaultValue="12:00 PM">
+            {endTimeSlots.map((time) => <option key={time} value={time}>End {formatTime24(time)} / {time}</option>)}
+          </select>
+          <input className="admin-input" name="reason" placeholder="Reason, e.g. personal / unavailable" />
+        </div>
       </AdminActionForm>
 
       <section className="overflow-x-auto rounded-lg bg-white shadow-sm ring-1 ring-ink/10">
@@ -105,15 +116,10 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                         <p className="mt-2 text-xs font-black uppercase text-red-soft">{block.startTime || block.time} - {block.endTime || getNextTimeSlot(block.time)}</p>
                         <p className="mt-2 text-xs font-bold text-ash">{block.reason}</p>
                         {isBlockStart ? (
-                          <AdminActionForm className="mt-3" refreshOnSuccess>
-                            {({ pending }) => (
-                              <>
-                                <input type="hidden" name="action" value="remove-block" />
-                                <input type="hidden" name="blockId" value={block.id} />
-                                <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-                                <button className="text-xs font-black uppercase text-red-soft disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Removing..." : "Remove"}</button>
-                              </>
-                            )}
+                          <AdminActionForm className="mt-3" pendingLabel="Removing..." refreshOnSuccess submitClassName="text-xs font-black uppercase text-red-soft disabled:cursor-not-allowed disabled:opacity-60" submitLabel="Remove">
+                            <input type="hidden" name="action" value="remove-block" />
+                            <input type="hidden" name="blockId" value={block.id} />
+                            <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
                           </AdminActionForm>
                         ) : null}
                       </div>
@@ -141,23 +147,20 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         <div className="mt-4 grid gap-3">
           {schedule.flatMap((day) => day.blocks.map((block) => ({ ...block, date: day.date }))).length ? (
             schedule.flatMap((day) => day.blocks.map((block) => (
-              <AdminActionForm className="grid gap-3 rounded-lg bg-smoke p-3 md:grid-cols-[1fr_1fr_1fr_1.3fr_auto]" key={block.id}>
-                {({ pending }) => (
-                  <>
-                    <input type="hidden" name="action" value="update-block" />
-                    <input type="hidden" name="blockId" value={block.id} />
-                    <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
-                    <input className="admin-input" name="date" type="date" defaultValue={day.date} />
-                    <select className="admin-input" name="startTime" defaultValue={block.startTime || block.time}>
-                      {timeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
-                    </select>
-                    <select className="admin-input" name="endTime" defaultValue={block.endTime || getNextTimeSlot(block.time)}>
-                      {endTimeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
-                    </select>
-                    <input className="admin-input" name="reason" defaultValue={block.reason} />
-                    <button className="rounded-lg bg-ink px-4 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={pending} type="submit">{pending ? "Saving..." : "Save"}</button>
-                  </>
-                )}
+              <AdminActionForm className="rounded-lg bg-smoke p-3" key={block.id} pendingLabel="Saving..." submitClassName="rounded-lg bg-ink px-4 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-60" submitLabel="Save">
+                <input type="hidden" name="action" value="update-block" />
+                <input type="hidden" name="blockId" value={block.id} />
+                <input type="hidden" name="returnTo" value={`/admin/schedule?date=${date}&view=${view}`} />
+                <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1.3fr_auto]">
+                  <input className="admin-input" name="date" type="date" defaultValue={day.date} />
+                  <select className="admin-input" name="startTime" defaultValue={block.startTime || block.time}>
+                    {timeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+                  </select>
+                  <select className="admin-input" name="endTime" defaultValue={block.endTime || getNextTimeSlot(block.time)}>
+                    {endTimeSlots.map((time) => <option key={time} value={time}>{formatTime24(time)} / {time}</option>)}
+                  </select>
+                  <input className="admin-input" name="reason" defaultValue={block.reason} />
+                </div>
               </AdminActionForm>
             )))
           ) : (

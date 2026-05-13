@@ -49,14 +49,14 @@ export function ClientEmailForm({
       });
       const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string } | null;
 
-      if (!data?.success) {
+      if (!response.ok || !data?.success) {
         setResult({ success: false, message: data?.error || "Client email could not be sent." });
         return;
       }
 
       setResult({ success: true, message: data.message || "Client email sent." });
-    } catch {
-      setResult({ success: false, message: "Client email could not be sent. Please try again." });
+    } catch (error) {
+      setResult({ success: false, message: error instanceof Error ? error.message : "Client email could not be sent. Please try again." });
     } finally {
       setPending(false);
     }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
+import { AdminErrorBanner, AdminPageHeader, FlashMessage, StatusBadge } from "@/components/admin/AdminShell";
+import { loadAdminData } from "@/lib/adminPageData";
 import {
   addDays,
   formatMoney,
@@ -37,9 +38,14 @@ export default async function AdminDashboardPage({
 }) {
   const params = await searchParams;
   const days = parseTimelineRange(params?.range);
-  const bookings = await listBookings();
-  const invoices = await listInvoices();
-  const businessSettings = await getBusinessMetricsSettings();
+  const [bookingsState, invoicesState, businessSettingsState] = await Promise.all([
+    loadAdminData("dashboard bookings", () => listBookings(), [], "Dashboard booking data is temporarily unavailable. The error was logged on the server."),
+    loadAdminData("dashboard invoices", () => listInvoices(), [], "Dashboard invoice data is temporarily unavailable. The error was logged on the server."),
+    loadAdminData("dashboard business settings", () => getBusinessMetricsSettings(), { marketingExpense: 0, updatedAt: new Date(0).toISOString() }),
+  ]);
+  const bookings = bookingsState.data;
+  const invoices = invoicesState.data;
+  const businessSettings = businessSettingsState.data;
   const metrics = getDashboardMetrics(bookings);
   const analytics = getDashboardAnalytics(bookings, { days, marketingExpense: businessSettings.marketingExpense });
   const activeBookings = bookings.filter((booking) => booking.status !== "cancelled");
@@ -93,6 +99,7 @@ export default async function AdminDashboardPage({
   return (
     <>
       <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
+      <AdminErrorBanner message={bookingsState.error || invoicesState.error || businessSettingsState.error} />
       <AdminPageHeader
         eyebrow="Analytics"
         title="Business Dashboard"

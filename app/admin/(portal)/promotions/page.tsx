@@ -1,4 +1,5 @@
-import { AdminPageHeader } from "@/components/admin/AdminShell";
+import { AdminErrorBanner, AdminPageHeader } from "@/components/admin/AdminShell";
+import { loadAdminData } from "@/lib/adminPageData";
 import { buildAdminClients } from "@/lib/adminData";
 import { listBookings } from "@/lib/bookingStore";
 
@@ -7,10 +8,17 @@ export const dynamic = "force-dynamic";
 const segments = ["No booking in 60 days", "Repeat customer", "Tint lead", "Ceramic lead"];
 
 export default async function AdminPromotionsPage() {
-  const clients = buildAdminClients(await listBookings());
+  const clientsState = await loadAdminData(
+    "promotion client segments",
+    async () => buildAdminClients(await listBookings()),
+    [],
+    "Promotion segments are temporarily unavailable. The error was logged on the server."
+  );
+  const clients = clientsState.data;
 
   return (
     <>
+      <AdminErrorBanner message={clientsState.error} />
       <AdminPageHeader eyebrow="Growth" title="Promotions" copy="Preparation lists for future email or SMS outreach. Mass sending is intentionally not enabled yet." />
       <section className="grid gap-4 lg:grid-cols-2">
         {segments.map((segment) => {
@@ -25,7 +33,7 @@ export default async function AdminPromotionsPage() {
                 {matches.slice(0, 8).map((client) => (
                   <div className="rounded-lg bg-smoke px-4 py-3" key={client.id}>
                     <p className="font-black uppercase">{client.name}</p>
-                    <p className="text-sm text-steel">{client.email} / {client.phone}</p>
+                    <p className="text-sm text-steel">{client.email || "Not provided"} / {client.phone || "Not provided"}</p>
                   </div>
                 ))}
                 {!matches.length ? <p className="rounded-lg bg-smoke p-4 text-sm font-bold text-steel">No customers in this segment yet.</p> : null}

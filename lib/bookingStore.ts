@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { Pool } from "pg";
-import type { BookingInput } from "./bookingSchema";
+import { bookingServices, type BookingInput, vehicleTypes } from "./bookingSchema";
 import { getDatabasePool } from "./database";
 import {
   addHoursToTimeSlot,
@@ -640,11 +640,7 @@ async function readLocalBookings() {
     bookings = [];
   }
 
-  return bookings.map((booking) => ({
-    ...booking,
-    source: normalizeBookingSource(booking.source),
-    status: normalizeBookingStatus(booking.status),
-  }));
+  return bookings.map(normalizeStoredBooking);
 }
 
 async function writeLocalBookings(bookings: StoredBooking[]) {
@@ -731,7 +727,7 @@ export function getNextTimeSlot(time: string) {
 }
 
 function mapDatabaseBooking(row: DatabaseBookingRow): StoredBooking {
-  return {
+  return normalizeStoredBooking({
     id: row.id,
     service: row.service as StoredBooking["service"],
     date: formatDatabaseDate(row.booking_date),
@@ -749,7 +745,7 @@ function mapDatabaseBooking(row: DatabaseBookingRow): StoredBooking {
     source: normalizeBookingSource(row.source),
     status: normalizeBookingStatus(row.status),
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
-  };
+  });
 }
 
 function normalizeBookingSource(source: string | undefined | null): StoredBooking["source"] {
@@ -829,4 +825,37 @@ function getBookingEndTime(startTime: string, durationHours: number | string | n
 
 function getSlotsForBookingWindow(startTime: string, durationHours: number | string | null | undefined) {
   return getSlotsInRange(startTime, getBookingEndTime(startTime, durationHours));
+}
+
+function normalizeStoredBooking(booking: Partial<StoredBooking>): StoredBooking {
+  const rawDetails = Array.isArray(booking.details) ? (booking.details as Array<Record<string, unknown>>) : [];
+  const details = rawDetails.map((detail) => ({
+    service: typeof detail.service === "string" && bookingServices.includes(detail.service as (typeof bookingServices)[number]) ? detail.service : bookingServices[0],
+    vehicleType: typeof detail.vehicleType === "string" && vehicleTypes.includes(detail.vehicleType as (typeof vehicleTypes)[number]) ? detail.vehicleType : vehicleTypes[0],
+    notes: typeof detail.notes === "string" ? detail.notes : "",
+    ...(typeof detail.lineNumber === "number" ? { lineNumber: detail.lineNumber } : {}),
+    ...(typeof detail.estimatedPrice === "string" ? { estimatedPrice: detail.estimatedPrice } : {}),
+    ...(typeof detail.basePrice === "string" ? { basePrice: detail.basePrice } : {}),
+    ...(typeof detail.discountPercent === "number" ? { discountPercent: detail.discountPercent } : {}),
+  }));
+
+  return {
+    id: typeof booking.id === "string" ? booking.id : randomUUID(),
+    service: typeof booking.service === "string" && bookingServices.includes(booking.service as (typeof bookingServices)[number]) ? booking.service : bookingServices[0],
+    date: typeof booking.date === "string" ? booking.date : "",
+    time: (typeof booking.time === "string" && isTimeSlot(booking.time) ? booking.time : timeSlots[0]) as StoredBooking["time"],
+    name: typeof booking.name === "string" ? booking.name : "",
+    phone: typeof booking.phone === "string" ? booking.phone : "",
+    email: typeof booking.email === "string" ? booking.email : "",
+    carModel: typeof booking.carModel === "string" ? booking.carModel : "",
+    vehicleType: typeof booking.vehicleType === "string" && vehicleTypes.includes(booking.vehicleType as (typeof vehicleTypes)[number]) ? booking.vehicleType : vehicleTypes[0],
+    address: typeof booking.address === "string" ? booking.address : "",
+    estimatedPrice: typeof booking.estimatedPrice === "string" ? booking.estimatedPrice : "",
+    notes: typeof booking.notes === "string" ? booking.notes : "",
+    details: details as StoredBooking["details"],
+    durationHours: getBookingDurationHours(booking.durationHours),
+    source: normalizeBookingSource(booking.source),
+    status: normalizeBookingStatus(booking.status),
+    createdAt: typeof booking.createdAt === "string" ? booking.createdAt : new Date(0).toISOString(),
+  };
 }

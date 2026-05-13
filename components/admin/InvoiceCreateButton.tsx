@@ -22,14 +22,14 @@ export function InvoiceCreateButton({ bookingId, returnTo }: { bookingId: string
       });
       const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string; paymentUrl?: string; emailSent?: string } | null;
 
-      if (!data?.success) {
+      if (!response.ok || !data?.success) {
         setResult({ success: false, message: data?.error || "Invoice could not be created." });
         return;
       }
 
       setResult({ success: true, warning: data.emailSent === "false", message: data.message || "Invoice created.", paymentUrl: data.paymentUrl });
-    } catch {
-      setResult({ success: false, message: "Invoice could not be created. Please try again." });
+    } catch (error) {
+      setResult({ success: false, message: error instanceof Error ? error.message : "Invoice could not be created. Please try again." });
     } finally {
       setPending(false);
     }

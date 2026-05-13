@@ -20,13 +20,17 @@ export function getBookingDetails(booking: StoredBooking): BookingDetailEstimate
     return booking.details as unknown as BookingDetailEstimate[];
   }
 
-  const details = [{ service: booking.service, vehicleType: booking.vehicleType, notes: booking.notes }];
+  const details = [{
+    service: booking.service || "Service not provided",
+    vehicleType: booking.vehicleType || "Vehicle not provided",
+    notes: booking.notes || "",
+  }];
 
   return buildBookingEstimate(details).details;
 }
 
 export function getBookingAmount(booking: StoredBooking) {
-  const amount = Number((booking.estimatedPrice || "").match(/\d+/)?.[0] || 0);
+  const amount = Number((booking.estimatedPrice || "").replace(/,/g, "").match(/\d+/)?.[0] || 0);
   if (amount) {
     return amount;
   }
@@ -38,9 +42,9 @@ export function buildAdminClients(bookings: StoredBooking[]): AdminClient[] {
   const clients = new Map<string, AdminClient>();
 
   bookings.forEach((booking) => {
-    const key = (booking.email || booking.phone || booking.name).trim().toLowerCase();
+    const key = (booking.email || booking.phone || booking.name || booking.id).trim().toLowerCase();
     const existing = clients.get(key);
-    const vehicleTypes = getBookingDetails(booking).map((detail) => detail.vehicleType);
+    const vehicleTypes = getBookingDetails(booking).map((detail) => detail.vehicleType || "Vehicle not provided");
 
     if (existing) {
       existing.bookings.push(booking);
@@ -57,10 +61,10 @@ export function buildAdminClients(bookings: StoredBooking[]): AdminClient[] {
 
     const client: AdminClient = {
       id: key,
-      name: booking.name,
-      email: booking.email,
-      phone: booking.phone,
-      address: booking.address,
+      name: booking.name || "Not provided",
+      email: booking.email || "",
+      phone: booking.phone || "",
+      address: booking.address || "",
       vehicles: [...new Set(vehicleTypes)],
       bookings: [booking],
       totalSpent: booking.status === "cancelled" ? 0 : getBookingAmount(booking),

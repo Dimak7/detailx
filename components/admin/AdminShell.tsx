@@ -13,7 +13,7 @@ const adminNav = [
 
 export function AdminShell({ children, email }: { children: React.ReactNode; email: string }) {
   return (
-    <div className="min-h-screen bg-smoke text-ink">
+    <div className="min-h-screen overflow-x-clip bg-smoke text-ink">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-ink/10 bg-ink px-4 py-5 text-white lg:block">
         <Link className="flex items-center gap-3" href="/admin/dashboard">
           <span className="grid h-12 w-12 place-items-center overflow-hidden rounded-lg bg-white p-1.5">
@@ -32,7 +32,7 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
           ))}
         </nav>
       </aside>
-      <div className="lg:pl-72">
+      <div className="min-w-0 lg:pl-72">
         <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/90 px-4 py-3 backdrop-blur md:px-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -58,7 +58,7 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
             ))}
           </nav>
         </header>
-        <main className="px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="mx-auto min-w-0 max-w-[1600px] px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );
@@ -99,5 +99,17 @@ export function FlashMessage({ status, message }: { status?: string; message?: s
     <p className={`mb-5 rounded-lg px-4 py-3 text-sm font-black uppercase ${status === "saved" ? "bg-ink text-white" : "bg-red-soft text-ink"}`}>
       {message || (status === "saved" ? "Admin update saved." : "Invoice could not be created. Check Stripe setup or booking data.")}
     </p>
+  );
+}
+
+export function AdminErrorBanner({ message }: { message?: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="mb-5 rounded-lg border border-red/20 bg-red-soft px-4 py-4 text-sm font-bold leading-6 text-ink">
+      {message}
+    </div>
   );
 }

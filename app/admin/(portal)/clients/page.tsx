@@ -1,5 +1,6 @@
-import { AdminPageHeader, FlashMessage } from "@/components/admin/AdminShell";
+import { AdminErrorBanner, AdminPageHeader, FlashMessage } from "@/components/admin/AdminShell";
 import { ClientEmailForm, type PromotionTemplate } from "@/components/admin/ClientEmailForm";
+import { loadAdminData } from "@/lib/adminPageData";
 import { buildAdminClients, formatMoney } from "@/lib/adminData";
 import { listBookings } from "@/lib/bookingStore";
 
@@ -27,13 +28,20 @@ export default async function AdminClientsPage({ searchParams }: { searchParams?
   const params = await searchParams;
   const search = (params?.search || "").toLowerCase();
   const segment = params?.segment || "all";
-  const clients = buildAdminClients(await listBookings())
-    .filter((client) => !search || [client.name, client.email, client.phone, client.address].some((value) => value.toLowerCase().includes(search)))
+  const clientsState = await loadAdminData(
+    "clients list",
+    async () => buildAdminClients(await listBookings()),
+    [],
+    "Client records are temporarily unavailable. The error was logged on the server."
+  );
+  const clients = clientsState.data
+    .filter((client) => !search || [client.name, client.email, client.phone, client.address].some((value) => (value || "").toLowerCase().includes(search)))
     .filter((client) => segment === "all" || client.tags.includes(segment));
 
   return (
     <>
       <FlashMessage status={params?.adminStatus} message={params?.adminMessage} />
+      <AdminErrorBanner message={clientsState.error} />
       <AdminPageHeader eyebrow="CRM" title="Clients" copy="Lightweight customer profiles generated from the shared booking history." />
       <form className="mb-5 grid gap-3 rounded-lg bg-white p-4 ring-1 ring-ink/10 md:grid-cols-[1fr_1fr_auto]" action="/admin/clients">
         <input className="admin-input" name="search" defaultValue={params?.search || ""} placeholder="Search name, phone, email, address" />
@@ -52,8 +60,8 @@ export default async function AdminClientsPage({ searchParams }: { searchParams?
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <h2 className="text-2xl font-black uppercase leading-none">{client.name}</h2>
-                <p className="mt-2 text-sm font-bold text-steel">{client.phone} / {client.email}</p>
-                <p className="mt-1 text-sm text-steel">{client.address}</p>
+                <p className="mt-2 text-sm font-bold text-steel">{client.phone || "Not provided"} / {client.email || "Not provided"}</p>
+                <p className="mt-1 text-sm text-steel">{client.address || "Not provided"}</p>
               </div>
               <p className="rounded-lg bg-ink px-4 py-3 text-sm font-black uppercase text-white">{formatMoney(client.totalSpent)}</p>
             </div>
@@ -61,7 +69,7 @@ export default async function AdminClientsPage({ searchParams }: { searchParams?
               {client.tags.length ? client.tags.map((tag) => <span className="rounded-lg bg-red-soft px-3 py-1 text-xs font-black uppercase text-ink" key={tag}>{tag}</span>) : <span className="rounded-lg bg-smoke px-3 py-1 text-xs font-black uppercase text-steel">New customer</span>}
             </div>
             <div className="mt-4 grid gap-2 rounded-lg bg-smoke p-4 text-sm">
-              <p><b>Vehicles:</b> {client.vehicles.join(", ") || "N/A"}</p>
+              <p><b>Vehicles:</b> {client.vehicles.join(", ") || "Not provided"}</p>
               <p><b>Last service:</b> {client.lastServiceDate}</p>
               <p><b>Booking history:</b> {client.bookings.length} booking{client.bookings.length === 1 ? "" : "s"}</p>
             </div>

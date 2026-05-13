@@ -184,12 +184,29 @@ function Gallery() {
           </div>
           <p className="max-w-sm text-sm font-bold uppercase tracking-[0.08em] text-ash">Recent finishes, interiors, gloss, and correction work.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {galleryImages.map((image, index) => (
-            <figure className={`group relative overflow-hidden rounded-lg border border-white/10 bg-white/5 ${getGalleryTileClass(index)}`} key={image.src}>
-              <div className="relative aspect-[4/5]">
-                <Image src={image.src} alt={image.alt} fill className="object-cover object-center transition duration-500 group-hover:scale-105" sizes="(min-width: 1280px) 24vw, (min-width: 768px) 45vw, 100vw" />
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {galleryImages.map((image) => (
+            <figure className="group overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/5 shadow-[0_22px_65px_rgba(0,0,0,0.24)]" key={image.src}>
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <Image
+                  src={image.src}
+                  alt={image.alt}
+                  fill
+                  className="object-cover transition duration-500 ease-out group-hover:scale-[1.035]"
+                  style={{ objectPosition: image.objectPosition }}
+                  sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/12 to-transparent opacity-85 transition duration-300 group-hover:opacity-100" />
               </div>
+              <figcaption className="flex items-center justify-between gap-4 border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-4 py-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black uppercase tracking-[0.12em] text-white">{image.title}</p>
+                  <p className="mt-1 truncate text-xs font-bold uppercase tracking-[0.08em] text-ash">{image.detail}</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-red-soft">
+                  DETAILX
+                </span>
+              </figcaption>
             </figure>
           ))}
         </div>
@@ -314,23 +331,6 @@ function Instagram() {
       </div>
     </section>
   );
-}
-
-function getGalleryTileClass(index: number) {
-  const classes = [
-    "xl:col-span-2",
-    "",
-    "",
-    "",
-    "",
-    "xl:col-span-2",
-    "",
-    "",
-    "",
-    "",
-  ];
-
-  return classes[index] ?? "";
 }
 
 function Faq() {

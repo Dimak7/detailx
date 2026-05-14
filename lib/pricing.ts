@@ -222,7 +222,7 @@ export const basePricedServices = [
     code: "BD",
     tone: "Marine finish",
     description: "Premium mobile boat detailing for interior, exterior, vinyl, compartments, oxidation, and protection. We come to you and clean it the right way.",
-    image: "/brand/detailx-work/black-porsche-studio.jpg",
+    image: "/brand/detailx-work/boat-detailing-service.jpeg",
     category: "Marine / Boat Detailing",
     ctaLabel: "Book Boat Detail",
     startingPrice: 300,

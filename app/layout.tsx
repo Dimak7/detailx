@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: "DETAILX Chicago | Premium Mobile Detailing",
   description:
     "Premium mobile detailing, ceramic coating, tint, and paint correction for Chicago drivers.",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+    shortcut: ["/favicon.ico"],
+  },
   openGraph: {
     title: "DETAILX Chicago",
     description: "Premium mobile detailing brought to homes, garages, and offices across Chicago.",

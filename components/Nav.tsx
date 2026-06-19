@@ -4,11 +4,11 @@ import Image from "next/image";
 import { useState } from "react";
 
 const navItems = [
-  ["Services", "#services"],
-  ["Difference", "#about"],
-  ["Results", "#work"],
-  ["Reviews", "#reviews"],
-  ["FAQ", "#faq"],
+  ["Services", "/#services"],
+  ["Difference", "/#about"],
+  ["Results", "/#work"],
+  ["Reviews", "/#reviews"],
+  ["FAQ", "/#faq"],
 ];
 
 const googleBusinessUrl = "https://share.google/KsLW0nq1eJoenaYYe";
@@ -19,7 +19,7 @@ export function Nav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-3 py-3">
       <nav className="content-shell grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border border-white/[0.12] bg-ink/[0.78] px-3 py-3 text-white shadow-[0_20px_70px_rgba(0,0,0,0.38)] backdrop-blur-xl lg:grid-cols-[1fr_auto_1fr]">
-        <a className="flex min-w-0 items-center gap-3" href="#top" onClick={() => setOpen(false)}>
+        <a className="flex min-w-0 items-center gap-3" href="/#top" onClick={() => setOpen(false)}>
           <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-white p-1.5 ring-1 ring-white/20">
             <Image src="/brand/detailx-logo.png" alt="DETAILX Chicago logo" width={48} height={48} className="h-full w-full object-contain" priority />
           </span>
@@ -41,7 +41,7 @@ export function Nav() {
           <a className="rounded-lg border border-white/[0.15] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10" href={googleBusinessUrl} target="_blank" rel="noreferrer">
             Google Profile
           </a>
-          <a className="rounded-lg bg-red px-5 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(193,18,31,0.32)] transition hover:-translate-y-0.5 hover:bg-red-dark" href="#booking">
+          <a className="rounded-lg bg-red px-5 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(193,18,31,0.32)] transition hover:-translate-y-0.5 hover:bg-red-dark" href="/#booking">
             Book Detail
           </a>
         </div>
@@ -61,7 +61,7 @@ export function Nav() {
           <a className="rounded-lg px-3 py-3 font-bold text-ash hover:bg-white/10 hover:text-white" href={googleBusinessUrl} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
             Google Business Profile
           </a>
-          <a className="rounded-lg bg-red px-3 py-3 text-center font-black text-white" href="#booking" onClick={() => setOpen(false)}>
+          <a className="rounded-lg bg-red px-3 py-3 text-center font-black text-white" href="/#booking" onClick={() => setOpen(false)}>
             Book Detail
           </a>
         </div>

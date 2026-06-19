@@ -8,6 +8,7 @@ const serviceTitles = [
   "Interior Full Detail",
   "Full Detail",
   "Deep Detail",
+  "Showroom Car Package",
   "Maintenance Detail",
   "Headlight Restoration",
   "Window Tint",
@@ -120,8 +121,8 @@ export const basePricedServices = [
     ctaLabel: "Book Deep Detail",
     prices: {
       Sedan: 350,
-      SUV: 370,
-      Truck: 390,
+      SUV: 380,
+      Truck: 400,
     },
     includes: [
       "Everything in Full Detail",
@@ -131,6 +132,24 @@ export const basePricedServices = [
       "Extra interior detail work",
       "Extra exterior grime cleanup",
       "Free wax included",
+    ],
+  },
+  {
+    title: "Showroom Car Package",
+    code: "SC",
+    tone: "Premium transformation",
+    description: "A premium complete vehicle transformation for clients who want the sharpest finish, deeper refinement, and a quote built around the vehicle's condition and goals.",
+    image: "/brand/detailx-work/black-porsche-driveway.jpg",
+    category: "Detailing",
+    ctaLabel: "Request a Quote",
+    nonFixedPrice: true,
+    startingPrice: 0,
+    discussionLabel: "Contact for pricing",
+    includes: [
+      "Complete interior and exterior transformation planning",
+      "Condition-based paint, finish, and presentation review",
+      "Refined detailing scope tailored to the vehicle",
+      "Quote confirmed after vehicle review and service goals",
     ],
   },
   {
@@ -350,8 +369,9 @@ export function getPriceQuote(
   }
 
   const fullAmount = amount;
-  const priceLabel = isDiscussionOnly ? "To be discussed" : formatPrice(fullAmount, isStartingAt);
-  const baseLabel = isDiscussionOnly ? "To be discussed" : formatPrice(amount, isStartingAt);
+  const discussionLabel = "discussionLabel" in servicePricing ? servicePricing.discussionLabel || "Request a quote" : "Request a quote";
+  const priceLabel = isDiscussionOnly ? discussionLabel : formatPrice(fullAmount, isStartingAt);
+  const baseLabel = isDiscussionOnly ? discussionLabel : formatPrice(amount, isStartingAt);
 
   return {
     amount: fullAmount,
@@ -378,7 +398,7 @@ export function getStartingPriceLabel(service: string, services: readonly Priced
   }
 
   if (servicePricing.nonFixedPrice && servicePricing.startingPrice <= 0) {
-    return servicePricing.discussionLabel || "Price discussed after inspection";
+    return servicePricing.discussionLabel || "Request a quote";
   }
 
   return `Starting at $${servicePricing.startingPrice}+`;
@@ -398,7 +418,7 @@ export function getTelegramPriceLabel(service: PricedService) {
   }
 
   if (service.nonFixedPrice && service.startingPrice <= 0) {
-    return "non-fixed (price discussed after inspection)";
+    return service.discussionLabel ? `non-fixed (${service.discussionLabel.toLowerCase()})` : "non-fixed (request a quote)";
   }
 
   return `starts at $${service.startingPrice}`;
@@ -427,7 +447,7 @@ export function buildBookingEstimate(details: BookingDetailSelection[], services
 
   return {
     details: normalizedDetails.map(({ amount, isStartingAt, ...detail }) => detail),
-    estimatedPrice: hasDiscussionPricing ? "To be discussed" : formatPrice(totalAmount, hasStartingAtPricing),
+    estimatedPrice: hasDiscussionPricing ? "Request a quote" : formatPrice(totalAmount, hasStartingAtPricing),
     totalAmount,
     hasStartingAtPricing,
     discountApplied: false,

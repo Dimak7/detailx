@@ -7,6 +7,7 @@ export const bookingServices = [
   "Interior Full Detail",
   "Full Detail",
   "Deep Detail",
+  "Showroom Car Package",
   "Maintenance Detail",
   "Headlight Restoration",
   "Ceramic Coating",

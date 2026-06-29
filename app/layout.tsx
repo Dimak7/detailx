@@ -1,17 +1,24 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: "#050506",
+};
 
 export const metadata: Metadata = {
   title: "DETAILX Chicago | Premium Mobile Detailing",
   description:
     "Premium mobile detailing, ceramic coating, tint, and paint correction for Chicago drivers.",
+  manifest: "/site.webmanifest",
   icons: {
     icon: [
-      { url: "/icon.png", type: "image/png" },
       { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-48x48.png", type: "image/png", sizes: "48x48" },
     ],
-    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
     shortcut: ["/favicon.ico"],
   },
   openGraph: {
